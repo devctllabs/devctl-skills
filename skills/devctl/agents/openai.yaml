@@ -1,0 +1,4 @@
+interface:
+  display_name: "Devctl"
+  short_description: "Project manifest, CLI, and skill routing"
+  default_prompt: "Use $devctl to interview for project shape, create a devctl.yaml manifest, run safe devctl CLI validation, source sync, contract lint, and generation when available, and route implementation to the right Devctl subskill."

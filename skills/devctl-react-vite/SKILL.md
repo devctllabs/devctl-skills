@@ -1,6 +1,6 @@
 ---
 name: devctl-react-vite
-description: Use when creating, organizing, refactoring, or migrating React + Vite + TypeScript apps, including feature-module boundaries, TanStack Router routes and pages, platform services and dependency injection, typed Result/DomainError handling, React Hook Form/Zod validation, UI loading/error/empty states, web/Tauri/mock services, generated OpenAPI code, shadcn/ui, Tailwind, Storybook, i18n, testing strategy, code quality tooling, documentation templates, or migration checklists.
+description: Use when creating, organizing, refactoring, or migrating React + Vite + TypeScript apps, including feature-module boundaries, collection query state with feature-owned sorting/filtering fields, TanStack Router routes and pages, platform services and dependency injection, typed Result/DomainError handling, React Hook Form/Zod validation, UI loading/error/empty states, web/Tauri/mock services, generated OpenAPI code, shadcn/ui, Tailwind, Storybook, i18n, testing strategy, code quality tooling, documentation templates, or migration checklists.
 ---
 
 # Devctl React Vite
@@ -26,6 +26,7 @@ Use this skill to organize React + Vite + TypeScript apps around feature modules
 - Read `references/forms-and-validation.md` when adding or changing typed forms, React Hook Form/Zod validation, form ownership boundaries, validation-message mapping, or form accessibility/tests.
 - Read `references/ui-error-states.md` for UI loading, empty, query error, partial-data, retry, mutation pending, and mutation error rendering policy.
 - Read `references/typescript-and-naming.md` for `tsconfig.json`, `vite.config.ts` path aliases, naming conventions, component/hook/service/type examples, and common shared types.
+- Read `references/collection-queries.md` when adding or changing list/search sorting, filtering, pagination, search state, or collection query contracts.
 - Read `references/feature-workflow.md` when adding or scaffolding a new feature module, including types, service, React Query hooks, components, pages, and public exports.
 - Read `references/practices-testing-state-quality.md` for component organization, type safety, custom hooks, error handling, environment variables, unit/integration tests, MSW HTTP-boundary service adapter tests, React Query, Zustand, Context API, ESLint, Prettier, and lint-staged guidance.
 - Read `references/storybook.md` when adding or changing UI components/pages, Storybook setup, visual/a11y/interaction test coverage, Storybook decorators, MSW handlers, or shared Storybook harnesses.
@@ -47,6 +48,7 @@ Use this skill to organize React + Vite + TypeScript apps around feature modules
 - Use `public/` only for static files served as-is by stable URL. Use `src/assets/` for imported or bundled images, icons, fonts, and global styles.
 - Use strict TypeScript and Vite path aliases that mirror `src/features`, `src/shared`, `src/core`, and `src/assets`.
 - Keep feature-specific code inside `src/features/[feature-name]/`; move only genuinely reusable code to `src/shared/`.
+- Keep concrete sort fields, filter keys, and collection query field unions inside the owning feature. Put only generic collection-query primitives in `shared/`.
 - Keep shadcn/ui base primitives in `shared/components/ui` using shadcn-style lowercase filenames such as `button.tsx` and `dialog.tsx`. Put app-specific reusable composites in sibling shared component folders, not in `ui/`.
 - For each new or changed file in `pages/`, `hooks/`, or `components/`, create or update a colocated test with the same basename, such as `ListPage.test.tsx`, `useProducts.test.ts`, or `ProductCard.test.tsx`. Use ownerless test files only when no single source file owns the behavior.
 - For every user-facing route-facing page in `features/*/pages`, create or update a colocated Storybook file with the same basename, such as `ListPage.stories.tsx`. Cover at least `Default` or `Loaded`; add `Loading` whenever the page reads async data or can show a skeleton; add search loading for async search/results surfaces; add empty, load-error, search/filter, dialog/open, dense-data, and long-content states when the page supports them. Follow the story naming conventions in `references/storybook.md`, including `LoadError`, domain `Empty*`, `ManyItems`, action state names, and hidden `*Regression` stories. Use title hierarchy `Features/<Feature>/Pages/<FileBasename>`, where the final segment matches the colocated page file basename rather than a domain-prefixed export name.

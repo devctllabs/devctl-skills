@@ -1,0 +1,4 @@
+interface:
+  display_name: "Devctl Go"
+  short_description: "Go services, libraries, monorepos"
+  default_prompt: "Use $devctl-go to organize a Go service or reusable library with package boundaries, DI/composition, runtime, monorepo, and deployment guidance."

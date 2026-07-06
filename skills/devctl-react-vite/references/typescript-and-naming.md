@@ -12,6 +12,7 @@ Includes TypeScript configuration, Vite path aliases, naming conventions, and co
   - Code Examples
 - Common Shared Types
   - shared/types/common.types.ts
+  - Collection query primitives
 
 ## TypeScript Configuration
 
@@ -286,9 +287,14 @@ export interface BaseEntity {
 export interface PaginationParams {
   page: number;
   limit: number;
-  sort?: string;
-  order?: 'asc' | 'desc';
 }
+
+export type SortDirection = 'asc' | 'desc';
+
+export type SortPreference<TField extends string> = {
+  direction: SortDirection;
+  field: TField;
+};
 
 export interface PaginatedResponse<T> {
   data: T[];
@@ -306,14 +312,25 @@ export interface SelectOption<T = string | number> {
   value: T;
   disabled?: boolean;
 }
-
-export interface FilterParams {
-  search?: string;
-  startDate?: string;
-  endDate?: string;
-  status?: string;
-  [key: string]: any;
-}
 ```
+
+Keep concrete collection fields in the owning feature, not in shared types:
+
+```typescript
+// features/decks/types/deck-sort.types.ts
+import type { SortPreference } from '@shared/types/common.types';
+
+export const deckSortFields = ['createdAt', 'name', 'updatedAt'] as const;
+
+export type DeckSortField = (typeof deckSortFields)[number];
+
+export type DeckSortPreference = SortPreference<DeckSortField>;
+```
+
+Use `shared/types` for generic reusable shapes such as `SortDirection`,
+`SortPreference<TField>`, `PaginationParams`, and `PaginatedResponse<T>`.
+Do not put feature-specific field unions such as `DeckSortField`,
+`NoteSortField`, lifecycle-specific filter unions, or generic search-only filter
+params in `shared/`.
 
 ---

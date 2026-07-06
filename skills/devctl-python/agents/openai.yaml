@@ -1,0 +1,4 @@
+interface:
+  display_name: "Devctl Python"
+  short_description: "Python services, libraries, packages"
+  default_prompt: "Use $devctl-python to organize this Python service, library, or package with project layout, CLI entrypoints, transport boundaries, testing, and deployment guidance."

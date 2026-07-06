@@ -13,7 +13,8 @@ Use this skill to author OpenAPI 3.1 contracts with a compact, reusable structur
 2. If the project has no coherent OpenAPI layout, use a root contract that references domain files and shared components rather than placing every path and schema in one file.
 3. Model the API contract first: resources, path hierarchy, operations, request bodies, success responses, error responses, and schema ownership.
 4. Keep object schemas strict and explicit: `type: object`, `additionalProperties: false`, complete `required`, stable property names, and reusable `$ref` entries for repeated concepts.
-5. Validate authoring quality with YAML/OpenAPI checks and manual review. Do not update generated clients, mock runtime output, or codegen drift unless the user explicitly asks.
+5. Use `$devctl` when OpenAPI files must be wired into `devctl.yaml`, sources/components must be updated, or Devctl CLI generation must run. This skill owns OpenAPI contract content.
+6. Validate authoring quality with YAML/OpenAPI checks and manual review. Do not update generated clients, mock runtime output, or codegen drift unless the user explicitly asks.
 
 ## References
 
