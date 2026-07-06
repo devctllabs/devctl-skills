@@ -1,0 +1,4 @@
+interface:
+  display_name: "Devctl Rust"
+  short_description: "Rust libraries, workspaces, runtime"
+  default_prompt: "Use $devctl-rust to organize this Rust library or workspace with public crate APIs, reusable core crates, thin delivery crates, Tauri boundaries, runtime, and deployment guidance."
