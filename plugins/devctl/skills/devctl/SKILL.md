@@ -25,6 +25,8 @@ Use this skill as the entrypoint for Devctl-managed projects. It owns the manife
 - Read `references/interview.md` when requirements are incomplete or the task asks to bootstrap/design a project.
 - Read `references/devctl-yaml.md` when creating, reviewing, or editing `devctl.yaml`.
 - Read `references/cli.md` before running `devctl` commands or deciding whether to edit YAML directly.
+- Read `references/grpc-contract-naming.md` when naming or linting local gRPC contracts.
+- Read `references/kafka-contract-naming.md` when naming or linting Kafka topics and schemas.
 - Read `references/routing.md` when delegating work to language, frontend, or contract skills.
 - Read `references/examples.md` when a concrete manifest or workflow example would reduce ambiguity.
 

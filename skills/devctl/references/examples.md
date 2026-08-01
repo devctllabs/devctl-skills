@@ -204,10 +204,10 @@ components:
   kafka:
     consumers:
       - name: users
-        topic: users.v1
+        topic: user_service.user.events.v1
         schema:
           format: proto
-          path: api/proto/kafka/users.v1.proto
+          path: api/proto/kafka/user_service.user.events.v1.proto
           message: users.v1.UserEvent
     env:
       system:
@@ -366,14 +366,14 @@ components:
   kafka:
     consumers:
       - name: audit
-        topic: audit.v2
+        topic: audit_service.audit.events.v2
         schema:
           format: json
           source: audit-schemas
-          path: kafka/audit.v2.json
+          path: kafka/audit_service.audit.events.v2.json
     producers:
       - name: debug
-        topic: debug.v1
+        topic: audit_worker.debug.events.v1
         schema:
           format: raw
 
@@ -430,7 +430,7 @@ devctl add redis cache
 devctl add s3 uploads
 devctl add s3-connection archive
 devctl add s3 exports --connection archive
-devctl add kafka-consumer users --topic users.v1
+devctl add kafka-consumer users --topic user_service.user.events.v1
 devctl validate
 devctl inspect
 mise install
