@@ -118,8 +118,8 @@ devctl add source users-devctl --type devctl --repo git@github.com:acme/users.gi
 devctl add source billing-proto-git --type git --repo git@github.com:acme/billing-proto.git --ref main
 devctl add http-client users --source users-devctl --export users-openapi
 devctl add grpc-client billing --source billing-proto-git --path api/proto/grpc/acme/billing/v1 --proto-root api/proto/grpc
-devctl add kafka-consumer users --topic users.v1
-devctl add kafka-producer audit --topic audit.v1
+devctl add kafka-consumer users --topic user_service.user.events.v1
+devctl add kafka-producer audit --topic audit_service.audit.events.v1
 ```
 
 `enable` is only for singleton project capabilities. Use `add` for named dependencies, resources, clients, consumers, and producers.
@@ -298,7 +298,7 @@ devctl add db primary --kind sqlite --default
 devctl add db primary --kind postgres
 devctl add redis cache
 devctl add s3 uploads
-devctl add kafka-consumer users --topic users.v1
+devctl add kafka-consumer users --topic user_service.user.events.v1
 devctl validate
 devctl inspect
 mise install

@@ -216,23 +216,23 @@ components:
   kafka:
     consumers:
       - name: users
-        topic: users.v1
+        topic: user_service.user.events.v1
         source: user-service-devctl
         # export: users-events
         encoding: binary
       - name: orders
-        topic: orders.v2
+        topic: order_service.order.events.v2
         schema:
           format: json
           source: schemas-git
-          path: api/json/kafka/orders.v2.json
+          path: api/json/kafka/order_service.order.events.v2.json
     producers:
       - name: audit
-        topic: audit.v1
+        topic: audit_service.audit.events.v1
         schema:
           format: proto
           source: schemas-git
-          path: api/proto/kafka/audit.v1.proto
+          path: api/proto/kafka/audit_service.audit.events.v1.proto
           proto_root: api/proto/kafka
           message: audit.v1.AuditEvent
     env:
