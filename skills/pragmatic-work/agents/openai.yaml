@@ -1,0 +1,7 @@
+interface:
+  display_name: "Pragmatic Work"
+  short_description: "Apply DRY, YAGNI, KISS, and SOLID"
+  default_prompt: "Use $pragmatic-work to keep this task simple, focused, and well-structured."
+
+policy:
+  allow_implicit_invocation: false

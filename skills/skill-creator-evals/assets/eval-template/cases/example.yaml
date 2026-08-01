@@ -1,0 +1,29 @@
+- description: Replace this example with a concrete __SKILL_NAME__ behavior
+  vars:
+    request: |
+      Use $__SKILL_NAME__ to complete the requested task.
+    fixtureDir: fixtures/example
+    targetSkillName: __SKILL_NAME__
+    targetSkillDir: __TARGET_SKILL_DIR__
+    qualityRubric: file://rubrics/quality.md
+  assert:
+    - type: skill-used
+      value: __SKILL_NAME__
+    - type: javascript
+      value: file://harness/assert-workspace.mjs
+      config:
+        requiredPaths:
+          - replace-with-an-observable-artifact
+    - type: agent-rubric
+      value: "{{qualityRubric}}"
+      threshold: 0.8
+      provider:
+        id: openai:codex-sdk
+        config:
+          working_dir: "{{workspaceDir}}"
+          sandbox_mode: read-only
+          approval_policy: never
+          network_access_enabled: false
+          web_search_mode: disabled
+          inherit_process_env: false
+          skip_git_repo_check: false

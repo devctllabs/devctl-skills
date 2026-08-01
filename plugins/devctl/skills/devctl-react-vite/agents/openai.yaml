@@ -1,0 +1,4 @@
+interface:
+  display_name: "Devctl React Vite"
+  short_description: "React/Vite architecture, queries, DI, tests"
+  default_prompt: "Use $devctl-react-vite to organize a React + Vite TypeScript app with feature modules, collection sorting/filtering state, routing, Storybook stories, service DI, generated code, typed error handling, React Hook Form/Zod form validation, i18n provider/resource architecture, and UI loading/error states."

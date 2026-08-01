@@ -1,0 +1,41 @@
+{
+  "name": "devctl",
+  "version": "0.1.0",
+  "description": "Architecture and delivery guidance for Devctl-managed software projects.",
+  "author": {
+    "name": "Devctl Labs",
+    "url": "https://github.com/devctllabs"
+  },
+  "homepage": "https://github.com/devctllabs/devctl-skills",
+  "repository": "https://github.com/devctllabs/devctl-skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "devctl",
+    "architecture",
+    "openapi",
+    "go",
+    "python",
+    "rust",
+    "react",
+    "vite"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Devctl",
+    "shortDescription": "Build consistent services, contracts, and web apps.",
+    "longDescription": "Devctl provides project-shaping, contract-design, backend, and frontend skills for building consistent Go, Python, Rust, OpenAPI, and React/Vite systems.",
+    "developerName": "Devctl Labs",
+    "category": "Productivity",
+    "capabilities": [
+      "Project architecture",
+      "API contract design",
+      "Implementation guidance"
+    ],
+    "websiteURL": "https://github.com/devctllabs/devctl-skills",
+    "defaultPrompt": [
+      "Create a Devctl project manifest for this repository.",
+      "Review this project using the matching Devctl skill.",
+      "Design a Devctl-managed service and its API contract."
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: Evaluate skill-creator-evals
+
+prompts:
+  - "{{request}}"
+
+providers:
+  - id: openai:codex-sdk
+    label: candidate
+    config:
+      working_dir: "{{workspaceDir}}"
+      model: gpt-5.6-luna
+      model_reasoning_effort: high
+      sandbox_mode: workspace-write
+      approval_policy: never
+      network_access_enabled: false
+      web_search_mode: disabled
+      inherit_process_env: false
+      cli_env:
+        PATH: "{{workspaceDir}}/.skill-creator-evals-bin:{{ env.PATH }}"
+      enable_streaming: true
+      persist_threads: false
+      skip_git_repo_check: false
+
+extensions:
+  - file://harness/workspace.mjs:workspaceHook
+
+tests:
+  - file://cases/*.yaml
+
+evaluateOptions:
+  maxConcurrency: 3
+  cache: false
+
+tracing:
+  enabled: true

@@ -1,0 +1,34 @@
+- description: Fix a boundary bug with regression-first TDD and preserved test layout
+  metadata:
+    costTier: deterministic
+  vars:
+    request: |
+      Use $devctl-python from `.agents/skills/devctl-python` to fix `parse_port`: port zero must
+      raise `ValueError`; valid ports 1 through 65535 remain unchanged.
+
+      Begin with the failing zero-port regression even though it is a Boundary/Exceptions scenario.
+      Follow RED/GREEN/refactor, use the documented unittest command, preserve the existing flat
+      test layout, and make only the smallest production and test changes. Do not add layers,
+      interfaces, tools, or move tests.
+    fixtureDir: fixtures/bugfix-regression-first
+    targetSkillName: devctl-python
+    targetSkillDir: ../../skills/devctl-python
+    toolExecutables: python3
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: devctl-python
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        caseName: bugfix-regression-first
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        phases:
+          - label: zero-port regression
+            mode: tdd
+            testPathRegex: "tests[/\\\\]test_ports\\.py"
+            commandRegex: "python3.*unittest.*(test_ports|discover)"
+            productionPathRegex: "src[/\\\\]netcfg[/\\\\]ports\\.py"

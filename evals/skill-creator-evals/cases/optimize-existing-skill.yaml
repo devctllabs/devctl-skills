@@ -1,0 +1,45 @@
+- description: Freeze a behavior-preserving optimization without an artificial regression
+  vars:
+    request: |
+      Use $skill-creator-evals to prepare a behavior-preserving simplification of the existing
+      skill at `.agents/skills/sample-summary`.
+
+      The requirements are complete:
+      - the approved suite at `evals/sample-summary` currently passes and its existing behavior
+        case is a frozen hard gate;
+      - reduce the loaded word count of `SKILL.md` by at least
+        {{minimumReductionPercent}}% without adding files;
+      - measure the deterministic word-count baseline once before editing;
+      - no additional baseline agent repetitions are needed for this deterministic criterion;
+      - after the future edit, all existing hard gates must pass once with
+        `node evals/sample-summary/harness/run.mjs all`;
+      - do not add an artificial behavioral regression case for this optimization.
+
+      Add the optimization measurement artifacts, present the complete optimization eval contract,
+      execute every added measurement script against representative passing and failing inputs,
+      and stop for explicit approval. Do not call skill-creator, run a candidate or model eval,
+      modify the target skill, behavior case, or existing runner.
+    fixtureDir: fixtures/optimize-existing-skill
+    targetSkillName: skill-creator-evals
+    targetSkillDir: ../../skills/skill-creator-evals
+    minimumReductionPercent: 18
+    qualityRubric: file://rubrics/optimization-quality.md
+    toolExecutables: node,promptfoo
+  assert:
+    - type: javascript
+      value: file://harness/assert-optimization-contract.mjs
+    - type: agent-rubric
+      value: "{{qualityRubric}}"
+      threshold: 0.8
+      provider:
+        id: openai:codex-sdk
+        config:
+          working_dir: "{{workspaceDir}}"
+          model: gpt-5.6-luna
+          model_reasoning_effort: xhigh
+          sandbox_mode: read-only
+          approval_policy: never
+          network_access_enabled: false
+          web_search_mode: disabled
+          inherit_process_env: false
+          skip_git_repo_check: false

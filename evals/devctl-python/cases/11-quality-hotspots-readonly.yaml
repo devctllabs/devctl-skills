@@ -1,0 +1,26 @@
+- description: Detect concentrated complexity and owner-test gaps despite green quality gates
+  metadata:
+    costTier: judged
+  vars:
+    request: |
+      Use $devctl-python from `.agents/skills/devctl-python` to review this Python 3.12 application.
+      The configured checks are green; determine whether complexity and tests are nevertheless
+      sufficient. Analyze only material findings.
+
+      Review cognitive-complexity concentration and the tests against
+      Zero -> One -> Many -> Boundary -> Exceptions -> Interfaces at each behavior owner. Distinguish
+      service policy from filesystem adapter behavior, including atomic publication and rollback.
+      Decide whether the configured threshold or suppression policy should change. This is read-only:
+      do not edit files, install tools, or manufacture test results.
+    fixtureDir: fixtures/quality-hotspots-readonly
+    targetSkillName: devctl-python
+    targetSkillDir: ../../skills/devctl-python
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: devctl-python
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        caseName: quality-hotspots-readonly

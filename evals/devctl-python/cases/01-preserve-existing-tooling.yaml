@@ -1,0 +1,39 @@
+- description: Preserve an existing Poetry and Pyright project while fixing behavior
+  metadata:
+    costTier: deterministic
+  vars:
+    request: |
+      Use $devctl-python from `.agents/skills/devctl-python` to fix `OrderService.archive` in this
+      existing project.
+
+      Required public behavior:
+      - archive only the order whose `id` equals `order_id`;
+      - preserve the order and values of all other entries;
+      - keep archiving an already archived order idempotent;
+      - raise `OrderNotFoundError` when no order matches.
+
+      Preserve this repository's Poetry, Pyright, package layout, and documented unittest command.
+      Do not standardize or migrate its tooling. Follow the skill's TDD workflow and make the
+      smallest production and test changes needed.
+    fixtureDir: fixtures/preserve-existing-tooling
+    targetSkillName: devctl-python
+    targetSkillDir: ../../skills/devctl-python
+    toolExecutables: python3
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: devctl-python
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        caseName: preserve-existing-tooling
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        phases:
+          - label: order service regression
+            mode: tdd
+            testPathRegex: "tests[/\\\\].*test_order_service"
+            commandRegex: "python3.*unittest"
+            productionPathRegex: "src[/\\\\]orders[/\\\\]service\\.py"

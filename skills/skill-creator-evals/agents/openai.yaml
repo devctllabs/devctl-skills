@@ -1,0 +1,7 @@
+interface:
+  display_name: "Skill Creator Evals"
+  short_description: "Explicit-only: verify skill changes against frozen eval contracts"
+  default_prompt: "Use $skill-creator-evals only when explicitly requested to freeze a Promptfoo eval contract before changing this skill."
+
+policy:
+  allow_implicit_invocation: false

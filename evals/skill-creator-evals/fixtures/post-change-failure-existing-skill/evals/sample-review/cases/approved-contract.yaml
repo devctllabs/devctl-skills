@@ -1,0 +1,8 @@
+- description: Preserve error-handling review coverage
+  vars:
+    contractStatus: approved
+    expectedPostChangeResult: PASS
+    request: Review `src/catalog.py` for correctness and error handling.
+  assert:
+    - type: contains
+      value: missing id

@@ -1,0 +1,42 @@
+- description: Apply pragmatic principles to a focused non-code brief
+  vars:
+    request: |
+      Use $pragmatic-work to read `brief.md` and return the requested kickoff brief.
+      Do not modify any files.
+    fixtureDir: fixtures/non-code-brief
+    targetSkillName: pragmatic-work
+    targetSkillDir: ../../skills/pragmatic-work
+  assert:
+    - type: skill-used
+      value: pragmatic-work
+    - type: javascript
+      value: file://harness/assert-workspace.mjs
+      config:
+        unchangedPaths:
+          - .
+    - type: agent-rubric
+      value: file://rubrics/completeness.md
+      threshold: 0.8
+      provider: &judge
+        id: openai:codex-sdk
+        config:
+          codex_path_override: codex
+          working_dir: "{{workspaceDir}}"
+          sandbox_mode: read-only
+          approval_policy: never
+          network_access_enabled: false
+          web_search_mode: disabled
+          inherit_process_env: false
+          skip_git_repo_check: false
+    - type: agent-rubric
+      value: file://rubrics/simplicity.md
+      threshold: 0.8
+      provider: *judge
+    - type: agent-rubric
+      value: file://rubrics/non-duplication.md
+      threshold: 0.8
+      provider: *judge
+    - type: agent-rubric
+      value: file://rubrics/responsibilities.md
+      threshold: 0.8
+      provider: *judge

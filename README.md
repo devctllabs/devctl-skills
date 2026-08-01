@@ -1,11 +1,56 @@
 # Devctl Skills
 
-A curated set of development skills for AI coding agents.
+A curated set of development skills for AI coding agents, distributed both as
+standalone skills and as an installable Codex plugin.
 
 Each skill gives focused guidance, defaults, and reference material for a
 specific kind of engineering work.
 
 ## Available Skills
+
+### pragmatic-work
+
+An explicit-only modifier that applies DRY, YAGNI, KISS, and SOLID pragmatically to any LLM task.
+It favors the simplest complete result, avoids repetition and speculative scope, and keeps
+responsibilities and dependencies clear.
+
+### devctl
+
+The entrypoint for Devctl-managed projects, manifests, CLI workflows, and
+implementation-skill routing.
+
+**Use when:**
+
+- Interviewing for a new project's shape
+- Creating or updating `devctl.yaml`
+- Running Devctl initialization, synchronization, linting, or generation
+- Choosing the language, frontend, or contract skill for follow-up work
+
+**Covers:**
+
+- Project and component discovery
+- Declarative manifests and environment configuration
+- Safe CLI workflows for `validate`, `inspect`, `sync`, `lint`, and `gen`
+- Routing to the matching `devctl-*` skill
+
+### devctl-go
+
+Go architecture guidance for services, reusable libraries, packages, and
+multi-library monorepos.
+
+**Use when:**
+
+- Creating, organizing, refactoring, or reviewing Go projects
+- Designing package APIs, services, use cases, repositories, or clients
+- Adding transport adapters, dependency wiring, configuration, or migrations
+- Establishing tests, observability, deployment packaging, or quality tooling
+
+**Covers:**
+
+- Inward dependency boundaries and consumer-owned interfaces
+- Domain, service, use-case, repository, client, platform, and transport layers
+- Outside-in TDD, gomock/mockgen, and Go-native verification
+- Runtime lifecycle, generated code, monorepos, Docker, Helm, and Kubernetes
 
 ### devctl-openapi
 
@@ -26,6 +71,25 @@ OpenAPI 3.1 contract guidance for compact, downstream-friendly API schemas.
 - Problem details, facts-based validation errors, and localized-string boundaries
 - `oneOf` plus discriminator patterns for variant schemas
 
+### devctl-python
+
+Python architecture guidance for services, libraries, packages, CLI
+applications, and multi-package repositories.
+
+**Use when:**
+
+- Creating, organizing, refactoring, or reviewing Python projects
+- Designing package APIs, services, use cases, repositories, or clients
+- Adding HTTP, gRPC, messaging, CLI, configuration, or migration boundaries
+- Establishing pytest strategy, observability, packaging, or quality tooling
+
+**Covers:**
+
+- `pyproject.toml`, src-layout packages, and typed public APIs
+- Domain, service, use-case, repository, client, platform, and transport layers
+- Consumer-owned protocols, outside-in TDD, uv, Ruff, pytest, and typing
+- Runtime wiring, generated code, monorepos, Docker, Helm, and Kubernetes
+
 ### devctl-react-vite
 
 React + Vite + TypeScript project structure guidance for feature-oriented apps.
@@ -45,36 +109,94 @@ React + Vite + TypeScript project structure guidance for feature-oriented apps.
 - React Hook Form, Zod validation, i18n resources, and document locale metadata
 - Storybook stories, UI loading/error/empty states, and testing conventions
 
-## Installation
+### devctl-rust
 
-Copy one or more folders from `skills/` into the skills directory supported by
-your agent runtime. Keep the folder names unchanged so prompts can reference the
-same skill names.
+Rust architecture guidance for reusable crates, Cargo workspaces, servers,
+CLIs, workers, and Tauri applications.
 
-## Usage
+**Use when:**
 
-Invoke the skill by name in prompts, for example:
+- Creating, organizing, refactoring, or reviewing Rust projects
+- Designing crate APIs, services, use cases, repositories, or clients
+- Adding delivery crates, async runtime wiring, generated code, or migrations
+- Establishing tests, observability, deployment packaging, or quality tooling
 
-```text
-Use $devctl-openapi to add a new resource domain to this OpenAPI 3.1 contract.
-Use $devctl-react-vite to organize this React + Vite app structure.
+**Covers:**
+
+- Minimal crate graphs, reusable application cores, and inward dependencies
+- Domain, service, use-case, repository, client, platform, and delivery modules
+- Consumer-owned traits, outside-in TDD, Cargo checks, and Clippy
+- Tauri/UI monorepos, Docker, Compose, Helm, and Kubernetes
+
+## Install the Codex Plugin
+
+Add the GitHub repository as a marketplace, then install the plugin:
+
+```bash
+codex plugin marketplace add devctllabs/devctl-skills
+codex plugin add devctl@devctl
 ```
 
-Skills are designed for progressive disclosure: start with `SKILL.md`, then load
-only the reference files that match the task.
+Start a new Codex session after installation so the bundled skills are loaded.
+
+For local development, add the repository checkout instead:
+
+```bash
+codex plugin marketplace add .
+codex plugin add devctl@devctl
+```
+
+## Install Standalone Skills
+
+Copy one or more folders from `skills/` into a skills directory supported by
+your agent runtime. Keep folder names unchanged so prompts can reference the
+same skill names.
+
+Invoke a skill explicitly when needed:
+
+```text
+Use $pragmatic-work to keep this task simple, focused, and well-structured.
+Use $devctl to create a project manifest and choose the implementation skill.
+Use $devctl-openapi to add a resource domain to an OpenAPI 3.1 contract.
+Use $devctl-react-vite to organize a React + Vite TypeScript application.
+```
+
+Skills use progressive disclosure: start with `SKILL.md`, then load only the
+references relevant to the task.
+
+## Plugin Maintenance
+
+The root `skills/devctl*` directories are the source of truth. The installable
+bundle under `plugins/devctl/skills/` is generated and committed to the
+repository.
+
+Regenerate the bundle after changing a Devctl skill:
+
+```bash
+python3 scripts/sync_devctl_plugin.py
+```
+
+Check for drift without modifying files:
+
+```bash
+python3 scripts/sync_devctl_plugin.py --check
+```
+
+The synchronizer automatically includes current and future skill directories
+named `devctl` or `devctl-*`.
 
 ## Skill Structure
 
 ```text
 skills/
   <skill-name>/
-    SKILL.md              # Skill metadata and primary instructions
-    agents/openai.yaml    # UI metadata for skill lists and prompts
-    references/           # Detailed guidance loaded only when relevant
+    SKILL.md
+    agents/openai.yaml
+    references/
 ```
 
-Each skill can also include scripts or assets when deterministic helpers or
-reusable files are useful for the task.
+Skills can also include scripts and assets when deterministic helpers or
+reusable files are useful.
 
 ## License
 

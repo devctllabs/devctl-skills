@@ -1,0 +1,36 @@
+- description: Stop at a semantic post-change failure and request a contract decision
+  vars:
+    request: |
+      Use $skill-creator-evals to continue the approved change for the existing skill at
+      `skills/sample-review`.
+
+      The target skill was changed through skill-creator and the approved full suite then ran once.
+      Read `evidence/post-change-failure.txt`. The run has no infrastructure, fixture, grader, or
+      authentication errors. An approved case failed semantically.
+
+      Diagnose the conflict and present the available contract decisions with a recommendation.
+      Do not edit the skill or eval suite, do not start another eval run, and do not call
+      skill-creator until the user decides.
+    fixtureDir: fixtures/post-change-failure-existing-skill
+    targetSkillName: skill-creator-evals
+    targetSkillDir: ../../skills/skill-creator-evals
+    qualityRubric: file://rubrics/post-change-failure-quality.md
+    toolExecutables: node,promptfoo
+  assert:
+    - type: javascript
+      value: file://harness/assert-post-change-failure-gate.mjs
+    - type: agent-rubric
+      value: "{{qualityRubric}}"
+      threshold: 0.8
+      provider:
+        id: openai:codex-sdk
+        config:
+          working_dir: "{{workspaceDir}}"
+          model: gpt-5.6-luna
+          model_reasoning_effort: xhigh
+          sandbox_mode: read-only
+          approval_policy: never
+          network_access_enabled: false
+          web_search_mode: disabled
+          inherit_process_env: false
+          skip_git_repo_check: false

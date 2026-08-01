@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "orders"
+version = "0.1.0"
+description = "Existing order application"
+authors = ["Example <example@example.invalid>"]
+packages = [{ include = "orders", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

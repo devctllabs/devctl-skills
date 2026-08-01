@@ -1,0 +1,4 @@
+description: Approved post-change contract for sample-review
+
+tests:
+  - file://cases/*.yaml

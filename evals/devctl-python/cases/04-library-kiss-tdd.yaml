@@ -1,0 +1,39 @@
+- description: Add a small stateless public library API without application architecture
+  metadata:
+    costTier: deterministic
+  vars:
+    request: |
+      Use $devctl-python from `.agents/skills/devctl-python` to add this public API to the existing
+      `acme_names` library:
+
+      `normalize_name(value: str) -> str`
+
+      It must strip leading/trailing whitespace, collapse each internal whitespace run to one
+      ASCII space, apply Unicode-aware case folding, and raise `ValueError` when the normalized
+      result is empty. Export it from `acme_names`.
+
+      Keep the library stateless and import-side-effect free. Follow the existing package layout,
+      documented unittest command, and the skill's one-test-at-a-time TDD workflow. Do not add
+      application layers or unrelated tooling.
+    fixtureDir: fixtures/library-kiss-tdd
+    targetSkillName: devctl-python
+    targetSkillDir: ../../skills/devctl-python
+    toolExecutables: python3
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: devctl-python
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        caseName: library-kiss-tdd
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        phases:
+          - label: public normalize_name API
+            mode: tdd
+            testPathRegex: "tests[/\\\\].*test_"
+            commandRegex: "python3.*unittest"
+            productionPathRegex: "src[/\\\\]acme_names"

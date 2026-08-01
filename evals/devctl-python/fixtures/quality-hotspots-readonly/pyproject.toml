@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hotspot-app"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hotspot_app"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "C90", "D", "PLR0911", "PLR0912", "PLR0915"]
+ignore = ["D100", "D104", "D105", "D107"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/hotspot_app/service/*.py" = ["D101", "D102"]
+"tests/**" = ["D", "S101"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.lint.pylint]
+max-branches = 15
+
+[tool.mypy]
+strict = true
+disallow_any_explicit = true
+
+[tool.complexipy]
+max-complexity-allowed = 15
+exclude = ["tests/**"]
+
+[tool.importlinter]
+root_packages = ["hotspot_app"]
+
+[[tool.importlinter.contracts]]
+name = "service does not import repository"
+type = "forbidden"
+source_modules = ["hotspot_app.service"]
+forbidden_modules = ["hotspot_app.repository"]
