@@ -1,0 +1,10 @@
+- description: Review Python code and return actionable findings
+  vars:
+    request: Review `src/catalog.py` for correctness and error handling.
+    fixtureDir: fixtures/catalog-review
+    qualityRubric: file://rubrics/review-quality.md
+  assert:
+    - type: contains
+      value: missing id
+    - type: agent-rubric
+      value: "{{qualityRubric}}"

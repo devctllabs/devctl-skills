@@ -1,0 +1,45 @@
+- description: Add a library API with a consumer-owned dependency Protocol
+  metadata:
+    costTier: deterministic
+  vars:
+    request: |
+      Use $devctl-python from `.agents/skills/devctl-python` to add this public API to the existing
+      `acme_expiry` library:
+
+      - `Clock`, a consumer-owned Protocol with `now() -> datetime`;
+      - `ExpiryPolicy(clock).expired(deadline: datetime) -> bool`.
+
+      `expired` returns false before the deadline and true at or after it. It raises `ValueError`
+      for a naive deadline. Export both public types from `acme_expiry`.
+
+      Keep the library free of application layers, global clocks, and concrete runtime clock
+      construction. Use the existing layout and unittest command. Implement the aware-deadline
+      behavior and naive-deadline rejection as two separate RED/GREEN/refactor cycles in the same
+      owner test and production module.
+    fixtureDir: fixtures/library-dip-tdd
+    targetSkillName: devctl-python
+    targetSkillDir: ../../skills/devctl-python
+    toolExecutables: python3
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: devctl-python
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        caseName: library-dip-tdd
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        phases:
+          - label: aware deadline behavior
+            mode: tdd
+            testPathRegex: "tests[/\\\\]unit[/\\\\]test_expiry\\.py"
+            commandRegex: "python3.*unittest.*(test_expiry|tests[./\\\\]unit)"
+            productionPathRegex: "src[/\\\\]acme_expiry[/\\\\]__init__\\.py"
+          - label: naive deadline rejection
+            mode: tdd
+            testPathRegex: "tests[/\\\\]unit[/\\\\]test_expiry\\.py"
+            commandRegex: "python3.*unittest.*(test_expiry|tests[./\\\\]unit)"
+            productionPathRegex: "src[/\\\\]acme_expiry[/\\\\]__init__\\.py"

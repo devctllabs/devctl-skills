@@ -1,0 +1,27 @@
+description: Existing green behavior suite for sample-summary
+
+prompts:
+  - "{{request}}"
+
+providers:
+  - id: openai:codex-sdk
+    config:
+      working_dir: ../..
+      sandbox_mode: read-only
+      approval_policy: never
+      network_access_enabled: false
+      web_search_mode: disabled
+      inherit_process_env: false
+      enable_streaming: true
+      persist_threads: false
+      skip_git_repo_check: false
+
+tests:
+  - file://cases/*.yaml
+
+evaluateOptions:
+  maxConcurrency: 1
+  cache: false
+
+tracing:
+  enabled: true

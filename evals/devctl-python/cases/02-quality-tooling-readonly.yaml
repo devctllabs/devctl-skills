@@ -1,0 +1,25 @@
+- description: Recommend the complete fallback quality stack without changing the repository
+  metadata:
+    costTier: judged
+  vars:
+    request: |
+      Use $devctl-python from `.agents/skills/devctl-python` to review this new Python 3.12
+      application and give a concrete, repository-specific quality-tooling standardization plan.
+
+      The repository has no established quality convention. Cover the complete local and CI
+      verification stack, configuration principles, development dependency/lockfile handling,
+      generated-code exclusions, rejection of explicit Any in handwritten annotations, and
+      architecture contracts that fit only the modules that actually exist. This is a read-only
+      planning task: do not edit any file or run installers.
+    fixtureDir: fixtures/quality-tooling-readonly
+    targetSkillName: devctl-python
+    targetSkillDir: ../../skills/devctl-python
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: devctl-python
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        caseName: quality-tooling-readonly

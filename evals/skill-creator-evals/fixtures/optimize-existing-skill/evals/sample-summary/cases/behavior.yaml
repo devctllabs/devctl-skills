@@ -1,0 +1,11 @@
+- description: Summarize the note concisely without changing the workspace
+  vars:
+    request: |
+      Use $sample-summary to summarize `note.md` in no more than two sentences.
+  assert:
+    - type: skill-used
+      value: sample-summary
+    - type: contains
+      value: "The release is scheduled for Friday"
+    - type: not-contains
+      value: "Thursday"

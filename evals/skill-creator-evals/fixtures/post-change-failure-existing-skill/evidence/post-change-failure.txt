@@ -1,0 +1,9 @@
+Case: Preserve error-handling review coverage
+Approved result after the skill change: PASS
+Observed post-change suite result: FAIL
+Candidate response: No findings.
+Failed deterministic assertion: output must contain "missing id"
+Infrastructure errors: none
+Fixture errors: none
+Grader errors: none
+Authentication errors: none

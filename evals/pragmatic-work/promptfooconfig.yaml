@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: Evaluate pragmatic-work
+
+prompts:
+  - "{{request}}"
+
+providers:
+  - id: openai:codex-sdk
+    label: candidate
+    config:
+      codex_path_override: codex
+      working_dir: "{{workspaceDir}}"
+      sandbox_mode: workspace-write
+      approval_policy: never
+      network_access_enabled: false
+      web_search_mode: disabled
+      inherit_process_env: false
+      cli_env:
+        PATH: "{{workspaceDir}}/.skill-creator-evals-bin:{{ env.PATH }}"
+      enable_streaming: true
+      persist_threads: false
+      skip_git_repo_check: false
+
+extensions:
+  - file://harness/workspace.mjs:workspaceHook
+
+tests:
+  - file://cases/*.yaml
+
+evaluateOptions:
+  maxConcurrency: 3
+  cache: false
+
+tracing:
+  enabled: true

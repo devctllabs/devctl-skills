@@ -1,0 +1,42 @@
+- description: Make nested argparse help self-describing without changing execution
+  metadata:
+    costTier: deterministic
+  vars:
+    request: |
+      Use $devctl-python from `.agents/skills/devctl-python` to make the existing argparse CLI
+      help user-friendly without changing command execution or introducing a `help` command.
+
+      Preserve all four executable leaves and their stdout/stderr/exit behavior. Add public CLI
+      tests first and obtain a useful RED before production changes. Required help behavior:
+      - `admin --help` exits 0 without accessing dependencies and describes `package` as
+        `Manage packages.` and `agent` as `Manage agents.`;
+      - `admin package --help` describes `install` as `Install a package.` and `list` as
+        `List packages.`;
+      - `admin package install --help` uses `NAME`, explains `Package name to install.`, and shows
+        `admin package install demo` under an `example:` heading.
+
+      Keep the implementation surgical and use standard argparse metadata. Do not add a CLI
+      framework, a generic command registry, a separate `help` command, or unrelated files. Use the
+      documented unittest command and report the useful RED, GREEN, and final full-suite result.
+    fixtureDir: fixtures/argparse-help
+    targetSkillName: devctl-python
+    targetSkillDir: ../../skills/devctl-python
+    toolExecutables: python3
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: devctl-python
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        caseName: argparse-help
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        phases:
+          - label: public CLI help
+            mode: tdd
+            testPathRegex: "tests[/\\\\]unit[/\\\\]cli"
+            commandRegex: "python3.*unittest.*(tests[./\\\\]unit[./\\\\]cli|test_commands)"
+            productionPathRegex: "src[/\\\\]admin_cli[/\\\\]cli"

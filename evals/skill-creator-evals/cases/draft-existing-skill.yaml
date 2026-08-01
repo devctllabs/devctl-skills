@@ -1,0 +1,53 @@
+- description: Freeze a contract-first change by reusing an existing target case
+  vars:
+    request: |
+      Use $skill-creator-evals to prepare a change to the existing skill at
+      `skills/sample-review`. Its suite already contains the relevant target case at
+      `evals/sample-review/cases/review-result.yaml`.
+
+      The requirements are complete:
+      - preserve the useful caller-visible guarantees already documented by the skill and the
+        read-only nature of a review task;
+      - change the review result into a machine-readable public artifact with this shape:
+        `{summary: string, findings: [{path: string, line: integer,
+        severity: "high" | "medium" | "low", message: string}]}`;
+      - use the Codex provider's native structured-output support and deterministically validate
+        the target result;
+      - run at most {{requestedConcurrency}} candidate cases concurrently for this suite;
+      - use minimal disposable fixtures with no network or external services;
+      - combine deterministic workspace checks with agent-rubric quality review;
+      - store the suite at `evals/sample-review`.
+
+      Update the existing target case, its fixture contract, assertions, and rubric instead of
+      adding a duplicate regression case. Then present the complete eval contract and stop for
+      explicit approval. Before approval and before the target skill changes, do not run the
+      candidate or any model eval, create a candidate copy, call skill-creator, or modify
+      `skills/sample-review`. The approved execution order must call skill-creator first, then run
+      `node evals/sample-review/harness/run.mjs all --max-concurrency
+      {{requestedConcurrency}}`, with every case evaluated once. The contract must also state that
+      any post-change failures are classified and only failed case descriptions are rerun while
+      repairing them, followed by one final `all`.
+    fixtureDir: fixtures/draft-existing-skill
+    targetSkillName: skill-creator-evals
+    targetSkillDir: ../../skills/skill-creator-evals
+    requestedConcurrency: 2
+    qualityRubric: file://rubrics/draft-quality.md
+    toolExecutables: node,promptfoo
+  assert:
+    - type: javascript
+      value: file://harness/assert-self-smoke.mjs
+    - type: agent-rubric
+      value: "{{qualityRubric}}"
+      threshold: 0.8
+      provider:
+        id: openai:codex-sdk
+        config:
+          working_dir: "{{workspaceDir}}"
+          model: gpt-5.6-luna
+          model_reasoning_effort: xhigh
+          sandbox_mode: read-only
+          approval_policy: never
+          network_access_enabled: false
+          web_search_mode: disabled
+          inherit_process_env: false
+          skip_git_repo_check: false

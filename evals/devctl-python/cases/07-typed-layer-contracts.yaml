@@ -1,0 +1,45 @@
+- description: Replace anonymous records and repository helpers with typed capability boundaries
+  metadata:
+    costTier: judged
+  vars:
+    request: |
+      Use $devctl-python from `.agents/skills/devctl-python` to refactor this run dispatch slice
+      without changing its persisted JSON shape or behavior.
+
+      Replace the public `dict[str, Any]` result with immutable `DispatchOperation` and
+      `DispatchResult` domain contracts. `labels` is a genuine dynamic string-to-string semantic
+      map and may remain a mapping. Make `RunService` depend on a consumer-owned `RunRepository`
+      Protocol and expose `dispatch(run_id, limit) -> DispatchResult`.
+
+      Add `FilesystemRunRepository(root)` as the concrete adapter. It must own JSON decoding,
+      filesystem layout, reads, writes, and mapping to the domain contracts. Keep codec/layout
+      helpers private to the adapter package; service code must not import repository modules or
+      perform filesystem I/O. Wire the adapter in `deps`.
+
+      Preserve the positive-limit rule and current state transition. Service tests must use a
+      small repository fake; repository integration tests must use `TemporaryDirectory`. Keep
+      unittest as the test runner. Add the appropriate mypy explicit-Any gate and an Import Linter
+      contract forbidding service imports from repository. Establish GREEN characterization before
+      the behavior-preserving production refactor, then run the complete suite.
+    fixtureDir: fixtures/typed-layer-contracts
+    targetSkillName: devctl-python
+    targetSkillDir: ../../skills/devctl-python
+    toolExecutables: python3
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: devctl-python
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        caseName: typed-layer-contracts
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        phases:
+          - label: dispatch characterization
+            mode: characterization
+            testPathRegex: "tests[/\\\\].*dispatch"
+            commandRegex: "python3.*unittest"
+            productionPathRegex: "src[/\\\\]runtracker"
