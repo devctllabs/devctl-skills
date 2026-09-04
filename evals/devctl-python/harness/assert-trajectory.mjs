@@ -59,12 +59,45 @@ function assertPhases(spans, phases, forbiddenRedOutputRegex) {
     const phase = phases[phaseIndex];
     const label = phase.label ?? phase.productionPathRegex;
     const mode = phase.mode ?? "tdd";
-    if (!["tdd", "characterization"].includes(mode)) {
+    const greenCommandRegex = phase.greenCommandRegex ?? phase.commandRegex;
+    if (!["tdd", "tdd-or-green", "characterization", "baseline"].includes(mode)) {
       return {
         pass: false,
         score: 0,
         reason: `Unsupported trajectory mode for ${label}: ${mode}`,
       };
+    }
+
+    if (mode === "baseline") {
+      const guardedProductionRegex =
+        phase.forbiddenProductionPathRegex ?? phase.productionPathRegex;
+      const productionIndex = findIndex(
+        spans,
+        cursor,
+        (span) => isFileChange(span, guardedProductionRegex),
+      );
+      const commandSearchEnd = productionIndex >= 0 ? productionIndex : spans.length;
+      const checkpointIndex = findIndexBefore(
+        spans,
+        cursor,
+        commandSearchEnd,
+        (span) =>
+          isCommand(span, phase.commandRegex) &&
+          span.attributes?.["codex.exit_code"] === 0,
+      );
+      if (checkpointIndex < 0) {
+        return {
+          pass: false,
+          score: 0,
+          reason:
+            productionIndex >= 0
+              ? `${label} production changed before baseline GREEN`
+              : `Missing ${label} baseline GREEN command`,
+        };
+      }
+      observed.push(`${label}: baseline GREEN`);
+      cursor = checkpointIndex + 1;
+      continue;
     }
 
     const testIndex = findIndex(
@@ -78,16 +111,57 @@ function assertPhases(spans, phases, forbiddenRedOutputRegex) {
 
     const forbiddenProductionRegex =
       phase.forbiddenProductionPathRegex ?? phase.productionPathRegex;
-    const earlyProductionIndex = findIndex(
+    const beforeCheckpointProductionRegex =
+      phase.beforeCheckpointProductionPathRegex ?? forbiddenProductionRegex;
+    let earlyProductionIndex = findIndex(
       spans,
       cursor,
-      (span) => isFileChange(span, forbiddenProductionRegex),
+      (span) => isFileChange(span, beforeCheckpointProductionRegex),
     );
+    let checkpointSearchStart = testIndex + 1;
+    if (phase.allowSkeletonBeforeRed && earlyProductionIndex >= 0) {
+      if (earlyProductionIndex <= testIndex) {
+        earlyProductionIndex = findIndex(
+          spans,
+          checkpointSearchStart,
+          (span) => isFileChange(span, beforeCheckpointProductionRegex),
+        );
+      } else {
+        const invalidCommandIndex = findIndexBefore(
+          spans,
+          testIndex + 1,
+          earlyProductionIndex,
+          (span) => {
+            if (!isCommand(span, phase.commandRegex)) {
+              return false;
+            }
+            const attributes = span.attributes ?? {};
+            return (
+              typeof attributes["codex.exit_code"] === "number" &&
+              attributes["codex.exit_code"] !== 0 &&
+              matches(
+                attributes["codex.output"],
+                phase.forbiddenRedOutputRegex ?? forbiddenRedOutputRegex,
+              )
+            );
+          },
+        );
+        if (invalidCommandIndex >= 0) {
+          checkpointSearchStart = earlyProductionIndex + 1;
+          earlyProductionIndex = findIndex(
+            spans,
+            checkpointSearchStart,
+            (span) => isFileChange(span, beforeCheckpointProductionRegex),
+          );
+        }
+      }
+    }
     const commandSearchEnd =
       earlyProductionIndex >= 0 ? earlyProductionIndex : spans.length;
 
     let checkpointIndex = -1;
-    for (let index = testIndex + 1; index < commandSearchEnd; index += 1) {
+    let checkpointWasGreen = false;
+    for (let index = checkpointSearchStart; index < commandSearchEnd; index += 1) {
       const span = spans[index];
       if (!isCommand(span, phase.commandRegex)) {
         continue;
@@ -98,6 +172,11 @@ function assertPhases(spans, phases, forbiddenRedOutputRegex) {
         checkpointIndex = index;
         break;
       }
+      if (mode === "tdd-or-green" && exitCode === 0) {
+        checkpointIndex = index;
+        checkpointWasGreen = true;
+        break;
+      }
       if (mode === "tdd" && exitCode === 0) {
         return {
           pass: false,
@@ -106,7 +185,7 @@ function assertPhases(spans, phases, forbiddenRedOutputRegex) {
         };
       }
       if (
-        mode === "tdd" &&
+        ["tdd", "tdd-or-green"].includes(mode) &&
         typeof exitCode === "number" &&
         exitCode !== 0 &&
         !matches(
@@ -126,7 +205,12 @@ function assertPhases(spans, phases, forbiddenRedOutputRegex) {
           reason: `${label} production changed before its required test checkpoint`,
         };
       }
-      const expectedCheckpoint = mode === "tdd" ? "useful RED" : "GREEN characterization";
+      const expectedCheckpoint =
+        mode === "characterization"
+          ? "GREEN characterization"
+          : mode === "tdd"
+            ? "useful RED"
+            : "useful RED or natural GREEN";
       return {
         pass: false,
         score: 0,
@@ -142,7 +226,41 @@ function assertPhases(spans, phases, forbiddenRedOutputRegex) {
       };
     }
 
-    const expectedCheckpoint = mode === "tdd" ? "RED" : "GREEN characterization";
+    if (checkpointWasGreen) {
+      const nextPhase = phases[phaseIndex + 1];
+      const nextTestIndex = nextPhase
+        ? findIndex(
+            spans,
+            checkpointIndex + 1,
+            (span) => isFileChange(span, nextPhase.testPathRegex),
+          )
+        : spans.length;
+      if (nextPhase && nextTestIndex < 0) {
+        return {
+          pass: false,
+          score: 0,
+          reason: `Missing ${nextPhase.label ?? nextPhase.productionPathRegex} test change`,
+        };
+      }
+      const productionAfterGreen = findIndexBefore(
+        spans,
+        checkpointIndex + 1,
+        nextTestIndex,
+        (span) => isFileChange(span, forbiddenProductionRegex),
+      );
+      if (productionAfterGreen >= 0) {
+        return {
+          pass: false,
+          score: 0,
+          reason: `${label} was already GREEN but production changed before the next scenario`,
+        };
+      }
+      observed.push(`${label}: natural GREEN -> no production`);
+      cursor = nextPhase ? nextTestIndex : checkpointIndex + 1;
+      continue;
+    }
+
+    const expectedCheckpoint = mode === "characterization" ? "GREEN characterization" : "RED";
     const productionIndex = findIndex(
       spans,
       checkpointIndex + 1,
@@ -160,7 +278,7 @@ function assertPhases(spans, phases, forbiddenRedOutputRegex) {
       spans,
       productionIndex + 1,
       (span) =>
-        isCommand(span, phase.commandRegex) &&
+        isCommand(span, greenCommandRegex) &&
         span.attributes?.["codex.exit_code"] === 0,
     );
     if (greenIndex < 0) {
@@ -218,7 +336,7 @@ function assertPhases(spans, phases, forbiddenRedOutputRegex) {
         refactorChangeIndex + 1,
         nextTestIndex,
         (span) =>
-          isCommand(span, phase.commandRegex) &&
+          isCommand(span, greenCommandRegex) &&
           span.attributes?.["codex.exit_code"] === 0,
       );
       if (finalGreenIndex < 0) {

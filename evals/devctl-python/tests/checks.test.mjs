@@ -28,8 +28,6 @@ async function fixtureRepository(name) {
 
 for (const [name, fixture = name] of [
   ["preserve-existing-tooling"],
-  ["nested-argparse-refactor"],
-  ["argparse-help"],
   ["library-kiss-tdd"],
   ["io-boundaries-refactor"],
   ["typed-layer-contracts"],
@@ -54,103 +52,244 @@ for (const [name, fixture = name] of [
 }
 
 
-test("io checker accepts list_plugins and list_packages capability names", async () => {
-  const workspace = await fixtureRepository("io-boundaries-refactor");
+test("preserve tooling checker accepts the surgical behavior fix", async () => {
+  const workspace = await fixtureRepository("preserve-existing-tooling");
   await writeFile(
-    path.join(workspace, "src/package_discovery/service.py"),
-    `from dataclasses import dataclass
-from typing import Protocol
+    path.join(workspace, "src/orders/service.py"),
+    `from dataclasses import dataclass, replace
 
-@dataclass(frozen=True)
-class Plugin:
-    name: str
-    enabled: bool
 
-class PluginClient(Protocol):
-    def list_plugins(self) -> tuple[Plugin, ...]: ...
+class OrderNotFoundError(Exception):
+    """Raised when an order does not exist."""
 
-class PackageCatalog(Protocol):
-    def list_packages(self) -> tuple[str, ...]: ...
 
-class PackageService:
-    def __init__(self, plugin_client: PluginClient, package_catalog: PackageCatalog) -> None:
-        self.plugin_client = plugin_client
-        self.package_catalog = package_catalog
+@dataclass(frozen=True, slots=True)
+class Order:
+    id: str
+    archived: bool = False
 
-    def discover(self) -> tuple[str, ...]:
-        enabled = {item.name for item in self.plugin_client.list_plugins() if item.enabled}
-        available = set(self.package_catalog.list_packages())
-        return tuple(sorted(enabled & available))
+
+class OrderService:
+    """Own order operations."""
+
+    def archive(self, orders: tuple[Order, ...], order_id: str) -> tuple[Order, ...]:
+        """Archive one order while preserving the remaining order sequence."""
+        if not any(order.id == order_id for order in orders):
+            raise OrderNotFoundError(order_id)
+        return tuple(
+            replace(order, archived=True) if order.id == order_id else order
+            for order in orders
+        )
 `,
     "utf8",
   );
 
-  await mkdir(path.join(workspace, "src/package_discovery/client"), { recursive: true });
-  await mkdir(path.join(workspace, "src/package_discovery/repository"), { recursive: true });
-  await mkdir(path.join(workspace, "tests/unit/client"), { recursive: true });
-  await mkdir(path.join(workspace, "tests/integration/repository"), { recursive: true });
-  await writeFile(
-    path.join(workspace, "src/package_discovery/client/codex.py"),
-    "class CodexPluginClient:\n    pass\n",
-    "utf8",
-  );
-  await writeFile(
-    path.join(workspace, "src/package_discovery/repository/filesystem.py"),
-    "class FilesystemPackageCatalog:\n    pass\n",
-    "utf8",
-  );
-  await writeFile(
-    path.join(workspace, "tests/unit/service/test_package_service.py"),
-    `import unittest
-
-class PackageServiceTests(unittest.TestCase):
-    def test_placeholder(self) -> None:
-        self.assertTrue(True)
-`,
-    "utf8",
-  );
-  await writeFile(
-    path.join(workspace, "tests/unit/client/test_codex.py"),
-    `import unittest
-
-class CodexPluginClientTests(unittest.TestCase):
-    def test_placeholder(self) -> None:
-        self.assertTrue(True)
-`,
-    "utf8",
-  );
-  await writeFile(
-    path.join(workspace, "tests/integration/repository/test_filesystem.py"),
-    `import unittest
-from tempfile import TemporaryDirectory
-
-class FilesystemPackageCatalogTests(unittest.TestCase):
-    def test_placeholder(self) -> None:
-        with TemporaryDirectory() as temporary:
-            self.assertTrue(temporary)
-`,
-    "utf8",
-  );
-
-  const child = spawnSync("python3", [CHECKER, "io-boundaries-refactor", workspace], {
+  const child = spawnSync("python3", [CHECKER, "preserve-existing-tooling", workspace], {
     encoding: "utf8",
     timeout: 60_000,
   });
+  const payload = JSON.parse(child.stdout);
 
   assert.equal(child.status, 0, child.stderr);
-  const payload = JSON.parse(child.stdout);
   assert.equal(
     payload.results.every((item) => item.pass),
     true,
     JSON.stringify(payload.results.filter((item) => !item.pass), null, 2),
   );
+});
 
+
+test("library KISS checker accepts the minimal stateless API", async () => {
+  const workspace = await fixtureRepository("library-kiss-tdd");
+  await writeFile(
+    path.join(workspace, "src/acme_names/__init__.py"),
+    `"""Public API for name normalization."""
+
+
+def normalize_name(value: str) -> str:
+    normalized = " ".join(value.split()).casefold()
+    if not normalized:
+        raise ValueError("name must not be empty")
+    return normalized
+`,
+    "utf8",
+  );
+
+  const child = spawnSync("python3", [CHECKER, "library-kiss-tdd", workspace], {
+    encoding: "utf8",
+    timeout: 60_000,
+  });
+  const payload = JSON.parse(child.stdout);
+
+  assert.equal(child.status, 0, child.stderr);
+  assert.equal(
+    payload.results.every((item) => item.pass),
+    true,
+    JSON.stringify(payload.results.filter((item) => !item.pass), null, 2),
+  );
+});
+
+
+const VALID_IO_SERVICE = `from typing import Protocol
+
+from package_discovery.model import Plugin
+
+
+class PluginSource(Protocol):
+    def list_plugins(self) -> tuple[Plugin, ...]: ...
+
+
+class PackageCatalog(Protocol):
+    def package_names(self) -> tuple[str, ...]: ...
+
+
+class PackageService:
+    def __init__(self, plugin_source: PluginSource, package_catalog: PackageCatalog) -> None:
+        self._plugin_source = plugin_source
+        self._package_catalog = package_catalog
+
+    def discover(self) -> tuple[str, ...]:
+        enabled = {
+            plugin.name for plugin in self._plugin_source.list_plugins() if plugin.enabled
+        }
+        available = set(self._package_catalog.package_names())
+        return tuple(sorted(enabled & available))
+`;
+
+const VALID_IO_TEST = `import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parents[3] / "src"))
+
+from package_discovery.model import Plugin
+from package_discovery.service import PackageService
+
+
+class PluginStub:
+    def list_plugins(self) -> tuple[Plugin, ...]:
+        return (Plugin("alpha", True), Plugin("beta", False))
+
+
+class CatalogStub:
+    def package_names(self) -> tuple[str, ...]:
+        return ("alpha", "gamma")
+
+
+class PackageServiceTests(unittest.TestCase):
+    def test_discovers_enabled_local_packages(self) -> None:
+        self.assertEqual(
+            PackageService(PluginStub(), CatalogStub()).discover(),
+            ("alpha",),
+        )
+`;
+
+async function validIoWorkspace() {
+  const workspace = await fixtureRepository("io-boundaries-refactor");
+  await writeFile(
+    path.join(workspace, "src/package_discovery/service.py"),
+    VALID_IO_SERVICE,
+    "utf8",
+  );
+  await writeFile(
+    path.join(workspace, "tests/unit/service/test_package_service.py"),
+    VALID_IO_TEST,
+    "utf8",
+  );
+  return workspace;
+}
+
+function runIoChecker(workspace) {
+  const child = spawnSync("python3", [CHECKER, "io-boundaries-refactor", workspace], {
+    encoding: "utf8",
+    timeout: 60_000,
+  });
+  assert.equal(child.status, 0, child.stderr);
+  return JSON.parse(child.stdout);
+}
+
+function failedReasons(payload) {
+  return payload.results.filter((item) => !item.pass).map((item) => item.reason).join("\n");
+}
+
+test("io checker accepts a focused consumer-owned capability refactor", async () => {
+  const payload = runIoChecker(await validIoWorkspace());
+
+  assert.equal(
+    payload.results.every((item) => item.pass),
+    true,
+    JSON.stringify(payload.results.filter((item) => !item.pass), null, 2),
+  );
+});
+
+test("io checker rejects direct external I/O imports in the service", async () => {
+  const workspace = await validIoWorkspace();
+  await writeFile(
+    path.join(workspace, "src/package_discovery/service.py"),
+    `${VALID_IO_SERVICE}\nimport subprocess\n`,
+    "utf8",
+  );
+
+  assert.match(failedReasons(runIoChecker(workspace)), /imports no I\/O or concrete adapter/);
+});
+
+test("io checker rejects concrete adapter imports in the service", async () => {
+  const workspace = await validIoWorkspace();
+  await writeFile(
+    path.join(workspace, "src/package_discovery/service.py"),
+    `${VALID_IO_SERVICE}\nfrom package_discovery.client import CodexPluginClient\n`,
+    "utf8",
+  );
+
+  assert.match(failedReasons(runIoChecker(workspace)), /imports no I\/O or concrete adapter/);
+});
+
+test("io checker rejects raw-I/O capability methods", async () => {
+  const workspace = await validIoWorkspace();
+  await writeFile(
+    path.join(workspace, "src/package_discovery/service.py"),
+    VALID_IO_SERVICE.replaceAll("package_names", "glob"),
+    "utf8",
+  );
+  await writeFile(
+    path.join(workspace, "tests/unit/service/test_package_service.py"),
+    VALID_IO_TEST.replaceAll("package_names", "glob"),
+    "utf8",
+  );
+
+  assert.match(failedReasons(runIoChecker(workspace)), /not raw I\/O/);
+});
+
+test("io checker rejects selection policy moved out of the service", async () => {
+  const workspace = await validIoWorkspace();
+  await writeFile(
+    path.join(workspace, "src/package_discovery/service.py"),
+    VALID_IO_SERVICE.replace(
+      /    def discover[\s\S]*$/,
+      `    def discover(self) -> tuple[str, ...]:
+        return tuple(
+            sorted(plugin.name for plugin in self._plugin_source.list_plugins() if plugin.enabled)
+        )
+`,
+    ),
+    "utf8",
+  );
+
+  assert.match(failedReasons(runIoChecker(workspace)), /keeps sorted enabled\/local policy/);
+});
+
+test("io checker rejects changes to existing integrations", async () => {
+  const workspace = await validIoWorkspace();
+  const clientPath = path.join(workspace, "src/package_discovery/client.py");
+  await writeFile(clientPath, `${await readFile(clientPath, "utf8")}\n# changed\n`, "utf8");
+
+  assert.match(failedReasons(runIoChecker(workspace)), /must remain unchanged/);
 });
 
 
 test("typed layer checker accepts structured contracts and a capability adapter", async () => {
   const workspace = await fixtureRepository("typed-layer-contracts");
-  await mkdir(path.join(workspace, "src/runtracker/repository"), { recursive: true });
+  await mkdir(path.join(workspace, "src/runtracker/repository/filesystem"), { recursive: true });
   await mkdir(path.join(workspace, "tests/integration/repository"), { recursive: true });
   await writeFile(
     path.join(workspace, "src/runtracker/domain.py"),
@@ -195,7 +334,12 @@ class RunService:
     "utf8",
   );
   await writeFile(
-    path.join(workspace, "src/runtracker/repository/filesystem.py"),
+    path.join(workspace, "src/runtracker/repository/filesystem/__init__.py"),
+    "from runtracker.repository.filesystem._repository import FilesystemRunRepository\n",
+    "utf8",
+  );
+  await writeFile(
+    path.join(workspace, "src/runtracker/repository/filesystem/_repository.py"),
     `import json
 from pathlib import Path
 from runtracker.domain import DispatchOperation, DispatchResult
@@ -501,117 +645,6 @@ class RepositoryTests(unittest.TestCase):
 
   assert.equal(child.status, 0, child.stderr);
   const payload = JSON.parse(child.stdout);
-  assert.equal(
-    payload.results.every((item) => item.pass),
-    true,
-    JSON.stringify(payload.results.filter((item) => !item.pass), null, 2),
-  );
-});
-
-test("library DIP checker accepts a consumer-owned Clock Protocol", async () => {
-  const workspace = await fixtureRepository("library-dip-tdd");
-  const files = new Map([
-    [
-      "src/acme_expiry/__init__.py",
-      `from datetime import datetime
-from typing import Protocol
-
-class Clock(Protocol):
-    def now(self) -> datetime: ...
-
-class ExpiryPolicy:
-    def __init__(self, clock: Clock) -> None:
-        self._clock = clock
-
-    def expired(self, deadline: datetime) -> bool:
-        if deadline.tzinfo is None:
-            raise ValueError("deadline must be timezone-aware")
-        return self._clock.now() >= deadline
-`,
-    ],
-    [
-      "tests/unit/test_expiry.py",
-      `import unittest
-from datetime import datetime, timedelta, timezone
-from acme_expiry import ExpiryPolicy
-
-class ClockFake:
-    def __init__(self, value):
-        self.value = value
-
-    def now(self):
-        return self.value
-
-class ExpiryTests(unittest.TestCase):
-    def test_aware_deadlines(self):
-        now = datetime(2026, 1, 1, tzinfo=timezone.utc)
-        policy = ExpiryPolicy(ClockFake(now))
-        self.assertFalse(policy.expired(now + timedelta(seconds=1)))
-        self.assertTrue(policy.expired(now))
-
-    def test_naive_deadline(self):
-        policy = ExpiryPolicy(ClockFake(datetime.now(timezone.utc)))
-        with self.assertRaises(ValueError):
-            policy.expired(datetime(2026, 1, 1))
-`,
-    ],
-  ]);
-  for (const [relativePath, contents] of files) {
-    await writeFile(path.join(workspace, relativePath), contents, "utf8");
-  }
-
-  const child = spawnSync("python3", [CHECKER, "library-dip-tdd", workspace], {
-    encoding: "utf8",
-    timeout: 60_000,
-  });
-  const payload = JSON.parse(child.stdout);
-
-  assert.equal(
-    payload.results.every((item) => item.pass),
-    true,
-    JSON.stringify(payload.results.filter((item) => !item.pass), null, 2),
-  );
-});
-
-test("bugfix checker accepts a regression-first surgical change", async () => {
-  const workspace = await fixtureRepository("bugfix-regression-first");
-  await writeFile(
-    path.join(workspace, "src/netcfg/ports.py"),
-    `def parse_port(value: str) -> int:
-    port = int(value)
-    if port < 1 or port > 65_535:
-        raise ValueError("port must be between 1 and 65535")
-    return port
-`,
-    "utf8",
-  );
-  await writeFile(
-    path.join(workspace, "tests/test_ports.py"),
-    `import unittest
-from netcfg import parse_port
-
-class PortTests(unittest.TestCase):
-    def test_parses_valid_port(self):
-        self.assertEqual(parse_port("443"), 443)
-
-    def test_rejects_above_maximum(self):
-        with self.assertRaises(ValueError):
-            parse_port("65536")
-
-    def test_rejects_zero(self):
-        with self.assertRaises(ValueError):
-            parse_port("0")
-`,
-    "utf8",
-  );
-
-  const child = spawnSync(
-    "python3",
-    [CHECKER, "bugfix-regression-first", workspace],
-    { encoding: "utf8", timeout: 60_000 },
-  );
-  const payload = JSON.parse(child.stdout);
-
   assert.equal(
     payload.results.every((item) => item.pass),
     true,

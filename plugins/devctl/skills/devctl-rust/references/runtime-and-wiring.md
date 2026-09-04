@@ -5,6 +5,8 @@
 - Runtime Boundaries
 - Default Delivery Shapes
 - CLI Model
+- CLI Command Trees
+- CLI Help Contract
 - CLI Handler Example
 - Server Runtime
 - Runtime Composition
@@ -111,6 +113,36 @@ path = "src/main.rs"
 ```
 
 Keep server startup as a `serve` subcommand only when this single binary is the shipped artifact.
+
+## CLI Command Trees
+
+Model nested CLI structure with `clap` subcommand enums and dispatch each parsed leaf exactly once.
+Keep a top-level group and its leaf handlers in one command module when the group owns distinct
+vocabulary or behavior. Intermediate groups select a leaf; executable behavior stays in leaf
+handlers.
+
+Keep a flat command tree in `cli.rs` while it remains clear. Split by top-level group when a group
+owns distinct dependencies, lifecycle, output policy, or enough behavior to obscure the root.
+Pass each handler only the core service/usecase capabilities it consumes; keep concrete repository,
+client, config loading, and runtime construction in delivery composition.
+
+Use a static enum tree for a fixed CLI. Add registries or dynamic command discovery only for a real
+plugin or runtime-extension requirement, and add a file per leaf only when independent ownership or
+complexity justifies it.
+
+## CLI Help Contract
+
+Treat generated help as public CLI behavior.
+
+- Give the root, every public group, and every executable leaf a concise description through doc
+  comments or `#[command(about = ...)]` and related `clap` metadata.
+- Give every public argument and option meaningful help. Use `value_name` for domain-specific value
+  labels and add a local `after_help` example only when syntax is not obvious.
+- Parse the command tree before dependency construction or external work. Root, group, and leaf
+  help must exit successfully without building `AppDeps` or running a handler.
+- Keep terminology consistent across commands, core contracts, config, and documentation. Preserve
+  the repository's established help style and standard `clap` templates unless compatibility
+  requirements demand otherwise.
 
 ## CLI Handler Example
 

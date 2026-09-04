@@ -33,7 +33,6 @@ Illustrative `.mise.toml` shape for a Go service:
 [tools]
 buf = "<devctl-default-or-project-version>"
 "go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen" = "<devctl-default-or-project-version>"
-"go:github.com/golang-migrate/migrate/v4/cmd/migrate" = "<devctl-default-or-project-version>"
 
 [tasks."gen:http"]
 run = "devctl gen http"
@@ -58,6 +57,25 @@ run = "go test ./..."
 ```
 
 Use local CLI defaults or existing repo versions for real scaffolds. Do not ship placeholder versions in a generated project.
+
+When at least one SQLite or PostgreSQL variant declares `migrations`, Devctl adds the migration CLI and target-specific tasks to `.mise.toml` instead of the application `go.mod`:
+
+```toml
+[tools]
+"go:github.com/golang-migrate/migrate/v4/cmd/migrate" = { version = "v4.19.1", tags = ["postgres", "sqlite"] }
+
+[tasks."migrate:primary:sqlite:create"]
+usage = 'arg "<name>" help="Migration name"'
+run = 'migrate create -ext sql -dir "migrations/primary/sqlite" -format "20060102150405" "${usage_name?}"'
+
+[tasks."migrate:primary:sqlite:up"]
+run = '''
+database_url="${USER_SERVICE_DB_PRIMARY_SQLITE_MIGRATIONS_URL:-sqlite://./data/user_service.db?_pragma=foreign_keys%281%29}"
+migrate -path "migrations/primary/sqlite" -database "$database_url" up
+'''
+```
+
+The scaffold also creates `migrations/<connection>/<variant>/.gitkeep`, but never seeds or applies SQL migrations.
 
 ## Minimal Rust HTTP Service
 
@@ -185,10 +203,14 @@ version: 1
 project:
   name: user-service
   language: go
-  description: "User management service"
 
 env:
   prefix: USER_SERVICE_
+
+sources:
+  contracts:
+    type: local
+    path: api/contracts
 
 components:
   http:
@@ -205,9 +227,11 @@ components:
     consumers:
       - name: users
         topic: user_service.user.events.v1
-        schema:
+        contract:
           format: proto
-          path: api/proto/kafka/user_service.user.events.v1.proto
+          source: contracts
+          path: proto/kafka/user_service.user.events.v1.proto
+          proto_root: proto
           message: users.v1.UserEvent
     env:
       system:
@@ -223,12 +247,17 @@ components:
             kind: sqlite
             dsn_env: DB_PRIMARY_SQLITE_DSN
             dsn_default: "file:./data/user_service.db?_foreign_keys=on"
-            migrations: migrations/sqlite
+            migrations:
+              path: migrations/primary/sqlite
+              database_env: DB_PRIMARY_SQLITE_MIGRATIONS_URL
+              database_default: "sqlite://./data/user_service.db?_pragma=foreign_keys%281%29"
           - name: postgres
             kind: postgres
             dsn_env: DB_PRIMARY_POSTGRES_DSN
             secret: true
-            migrations: migrations/postgres
+            migrations:
+              path: migrations/primary/postgres
+              database_env: DB_PRIMARY_POSTGRES_MIGRATIONS_URL
 
       - name: analytics
         default: clickhouse
@@ -239,25 +268,24 @@ components:
             secret: true
 
   redis:
-    instances:
+    connections:
       - name: cache
         addr_env: REDIS_CACHE_ADDR
-        default: "localhost:6379"
+        addr_default: "localhost:6379"
 
   s3:
     connections:
       - name: default
-        endpoint_env: S3_ENDPOINT
-        region_env: S3_REGION
-        credentials:
-          mode: static
-          access_key_id_env: S3_ACCESS_KEY_ID
-          secret_access_key_env: S3_SECRET_ACCESS_KEY
+        endpoint: http://localhost:9000
+        region: us-east-1
+        credentials: static
+        path_style: true
+        access_key_env: S3_ACCESS_KEY_ID
+        secret_key_env: S3_SECRET_ACCESS_KEY
     buckets:
       - name: uploads
         connection: default
-        bucket_env: S3_UPLOADS_BUCKET
-        prefix_env: S3_UPLOADS_PREFIX
+        bucket: uploads-local
 
   logging:
     env:
@@ -269,21 +297,68 @@ languages:
     module: github.com/acme/user-service
     generators:
       http:
-        tool: oapi-codegen
         oapi_config: tools/oapi/server.yaml
         server_out: gen/serverhttp
         client_out: gen/clienthttp
       kafka:
-        lib: segmentio/kafka-go
-        consumers_out: gen/consumerkafka
-        producers_out: gen/producerkafka
-      migrations:
-        tool: golang-migrate
-        path: migrations
-    components:
-      logging:
-        backend: zap
+        out: gen/kafka
+        buf_gen_config: tools/buf/kafka.gen.yaml
 ```
+
+## Go OpenAPI 3.1 Echo 5 Server Generation
+
+The manifest owns the contract and generated directory:
+
+```yaml
+components:
+  http:
+    server:
+      openapi: api/openapi/swagger.yaml
+
+languages:
+  go:
+    module: github.com/acme/user-service
+    generators:
+      http:
+        oapi_config: tools/oapi/server.yaml
+        server_out: gen/serverhttp
+```
+
+The project-owned `tools/oapi/server.yaml` owns generator features and deliberately has no output
+field:
+
+```yaml
+package: serverhttp
+generate:
+  models: true
+  echo5-server: true
+  strict-server: true
+  embedded-spec: true
+```
+
+The future Devctl workflow is:
+
+```bash
+devctl validate
+devctl lint http
+devctl gen http --target http-server
+git diff --exit-code -- gen/serverhttp/server.gen.go
+```
+
+Until the CLI is available, an already-scaffolded repo may expose the equivalent pinned task:
+
+```toml
+[tools]
+"go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen" = "2.8.0"
+
+[tasks."gen:http"]
+run = "oapi-codegen -config tools/oapi/server.yaml -o gen/serverhttp/server.gen.go api/openapi/swagger.yaml"
+```
+
+Run `mise install` and `mise run gen:http`, then report that `devctl validate` was unavailable. Keep
+the generated file checked in. Runtime validation loads the embedded document from the generated
+package; handwritten strict handlers, authentication, authorization, telemetry, and DI wiring stay
+outside `gen/serverhttp`.
 
 ## External HTTP and gRPC Clients
 
@@ -307,8 +382,7 @@ sources:
     repo: git@github.com:acme/billing-proto.git
     ref: main
     proto:
-      tool: buf
-      config: buf.yaml
+      buf_config: buf.yaml
 
 components:
   http:
@@ -331,8 +405,8 @@ languages:
       http:
         client_out: gen/clienthttp
       grpc:
-        client_out: gen/clientgrpc
-        buf_config: tools/buf/go.gen.yaml
+        out: gen/grpc
+        buf_gen_config: tools/buf/grpc.gen.yaml
 ```
 
 External contract workflow:
@@ -367,14 +441,14 @@ components:
     consumers:
       - name: audit
         topic: audit_service.audit.events.v2
-        schema:
+        contract:
           format: json
           source: audit-schemas
           path: kafka/audit_service.audit.events.v2.json
     producers:
       - name: debug
         topic: audit_worker.debug.events.v1
-        schema:
+        contract:
           format: raw
 
 languages:
@@ -382,9 +456,8 @@ languages:
     module: github.com/acme/audit-worker
     generators:
       kafka:
-        lib: segmentio/kafka-go
-        consumers_out: gen/consumerkafka
-        producers_out: gen/producerkafka
+        out: gen/kafka
+        buf_gen_config: tools/buf/kafka.gen.yaml
 ```
 
 ## Runtime Toggle vs Always Active
@@ -421,19 +494,20 @@ devctl enable http --always
 command -v devctl
 devctl --help
 command -v mise
-devctl init --lang go --name user-service
+devctl init manifest --lang go --preset http-service --name user-service --module github.com/acme/user-service
 devctl enable http
 devctl add db primary --kind sqlite --default
 devctl add db primary --kind postgres
 devctl add db analytics --kind clickhouse
-devctl add redis cache
+devctl add redis cache --addr-default localhost:6379
 devctl add s3 uploads
 devctl add s3-connection archive
 devctl add s3 exports --connection archive
 devctl add kafka-consumer users --topic user_service.user.events.v1
+devctl init scaffold
+mise install
 devctl validate
 devctl inspect
-mise install
 devctl lint http
 devctl lint kafka
 devctl gen config
@@ -448,4 +522,6 @@ mise install
 mise run gen
 ```
 
-If `devctl` is unavailable, create or edit `devctl.yaml` directly, skip generation, and report that generated artifacts were not refreshed.
+If `devctl` is unavailable, create or edit `devctl.yaml` directly. Skip generation unless the repo
+already has an explicit pinned project-local generation task like the Go HTTP example above. When
+using that fallback, report that Devctl validation and generation orchestration did not run.

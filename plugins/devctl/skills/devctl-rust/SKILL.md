@@ -1,6 +1,6 @@
 ---
 name: devctl-rust
-description: Use when creating, organizing, refactoring, or reviewing Rust projects, reusable libraries, crates, and Cargo workspaces, including reusable core crates, minimal crate boundaries, CLI/server/Tauri delivery, domain/service/usecase/repository/client/platform modules, filesystem and object-storage adapters, outbound HTTP/gRPC/SDK/subprocess clients, generated code, build.rs and OUT_DIR, migrations, configuration, async runtime boundaries, validation, auth/access control, error handling, observability, outside-in TDD, quality tooling, CI checks, devctl.yaml context, Rust plus UI monorepos, Dockerfiles, Docker Compose, Helm, and Kubernetes packaging.
+description: Use when creating, organizing, refactoring, or reviewing Rust projects, reusable libraries, crates, and Cargo workspaces, including reusable core crates, minimal crate boundaries, CLI/server/Tauri delivery, domain/service/usecase/repository/client/platform modules, filesystem and object-storage adapters, outbound HTTP/gRPC/SDK/subprocess clients, generated code, build.rs and OUT_DIR, migrations, configuration, async runtime boundaries, validation, auth/access control, error handling, observability, test ownership, quality tooling, CI checks, devctl.yaml context, Rust plus UI monorepos, Dockerfiles, Docker Compose, Helm, and Kubernetes packaging.
 ---
 
 # Devctl Rust
@@ -15,8 +15,11 @@ workspace policy, testable behavior, and Rust-native tooling.
 2. Preserve coherent repository conventions. Use this skill's defaults only when conventions are
    absent or the user asks to standardize.
 3. Read `references/code-principles.md` completely before planning, writing, changing, or reviewing
-   handwritten Rust. For production behavior, also read `references/testing-strategy.md` completely
-   before planning or editing it.
+   handwritten Rust. Before planning or editing handwritten production behavior, you must invoke
+   `$outside-in-tdd`, read its `SKILL.md` completely, and follow it as the controlling workflow. If
+   it is unavailable, stop and report the missing required skill; do not reproduce its workflow
+   locally. Read `references/testing-strategy.md` only for Rust-specific test ownership, doubles,
+   and verification.
 4. Keep the reusable application engine free of delivery frameworks. Prefer the minimum useful
    crate graph and use modules for `domain`, `service`, `usecase`, `repository`, `client`, and
    `platform` until a real crate boundary appears.
@@ -35,27 +38,6 @@ workspace policy, testable behavior, and Rust-native tooling.
    commands first; use the fallback baseline in `quality-tooling.md` only when no convention exists
    or standardization is requested.
 
-## Production Behavior Gate
-
-Use this state machine for every handwritten production behavior change:
-
-```text
-TEST -> useful RED -> minimum production -> GREEN -> simplify
-```
-
-- Advance one smallest coherent caller-visible scenario per cycle. RED must prove missing or wrong
-  requested behavior, never unrelated compilation, configuration, fixture, or setup failure.
-- For a new compiled API, a minimal declaration or skeleton may precede the first behavior test
-  solely to make the owner crate compile. It must not implement requested behavior; `todo!`,
-  `unimplemented!`, explicit unsupported errors, and equivalent placeholders never count as GREEN.
-- Do not edit requested behavior or a lower adapter before its useful RED. After every production
-  or simplification edit, rerun the same narrow owner check to GREEN before continuing.
-- Begin bugs with the failing regression. Begin pure refactors with GREEN characterization. Never
-  combine the initial behavior test and production change or hand-edit generated output.
-- Work outside-in and let each upper RED demand only the next smallest named contract. Before final
-  verification, require a direct suite for every changed behavior owner; one cross-layer test does
-  not substitute for missing module/crate suites.
-
 ## References
 
 - Read `references/overview-and-naming.md` for the architecture model, workspace layout, crate-vs-module decisions, Cargo workspace policy, layer naming conventions, type sharing rules, and compact order example.
@@ -69,7 +51,8 @@ TEST -> useful RED -> minimum production -> GREEN -> simplify
 - Read `references/validation-and-crosscutting.md` for validation ownership, middleware, service/usecase wrappers, idempotency, cache, helpers, and wrapper composition.
 - Read `references/runtime-and-wiring.md` when adding or changing CLI apps, servers, workers, delivery crates, runtime composition, config loading, secrets, shutdown, command parsing, binary layout, async runtime ownership, or delivery error presentation.
 - Read `references/auth-and-access-control.md` when adding authentication, authorization, actor/principal handling, tenant/resource access checks, policy dependencies, repository scoping, or auth-related service/usecase signatures.
-- Read `references/testing-strategy.md` for outside-in TDD, scenario order, behavior ownership, doubles, adapter integration tests, build scripts, generated drift, and workspace verification.
+- Read `references/testing-strategy.md` for Rust test ownership, doubles, adapter integration tests,
+  build scripts, generated drift, and workspace verification.
 - Read `references/quality-tooling.md` for formatting, Clippy, dependency hygiene, complexity review, dependency direction, and adoption in existing projects.
 - Read `references/observability-and-health.md` when adding tracing, logging, metrics, health checks, readiness/liveness, debug endpoints, profiling, or observability wrappers.
 - Read `references/tauri-and-monorepo.md` when working on Tauri apps, `rust/tauri`, `tauri.conf.json`, Rust plus UI monorepos, root package scripts, app data paths, Tauri commands, or UI-to-Rust bridge boundaries.

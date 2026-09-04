@@ -15,8 +15,11 @@ entrypoints, testable behavior, and Python-native packaging.
 2. Preserve coherent repository conventions. Use this skill's defaults only when conventions are
    absent or the user asks to standardize.
 3. Read `references/code-principles.md` completely before planning, writing, changing, or reviewing
-   handwritten Python. For production behavior, also read `references/testing-strategy.md`
-   completely before planning or editing it.
+   handwritten Python. Before planning or editing handwritten production behavior, you must invoke
+   `$outside-in-tdd`, read its `SKILL.md` completely, and follow it as the controlling workflow. If
+   it is unavailable, stop and report the missing required skill; do not reproduce its workflow
+   locally. Read `references/testing-strategy.md` only for Python-specific test ownership, doubles,
+   and verification.
 4. Keep dependencies inward:
    `transport/entrypoint -> usecase/service -> consumer-owned Protocols -> concrete adapters`.
    Domain and service code remain independent of frameworks, ORMs, SDKs, and generated DTOs.
@@ -34,25 +37,6 @@ entrypoints, testable behavior, and Python-native packaging.
    full fallback in `quality-tooling.md` only when no convention exists or standardization is
    requested.
 
-## Production Behavior Gate
-
-Use this state machine for every handwritten production behavior change:
-
-```text
-TEST -> useful RED -> minimum production -> GREEN -> simplify
-```
-
-- Advance one smallest coherent caller-visible scenario per cycle. RED must prove missing or wrong
-  requested behavior, never an import, syntax, configuration, collection, or fixture failure.
-- Do not edit requested production behavior or a lower layer before its useful RED. After every
-  production or simplification edit, rerun the same narrow check to GREEN before continuing.
-- Begin bugs with the failing regression. Begin pure refactors with GREEN characterization.
-  Never combine the initial test and production change or hand-edit generated output.
-- Work outside-in and let each upper RED demand only the next smallest typed contract. Read
-  `testing-strategy.md` for scenario selection, component checkpoints, and final evidence.
-- Before final verification, require a direct suite for each changed behavior owner; an integration
-  test that crosses several layers does not substitute for the missing owner suites.
-
 ## References
 
 - `overview-and-naming.md`: architecture, layout, naming, type sharing, and module splits.
@@ -68,7 +52,8 @@ TEST -> useful RED -> minimum production -> GREEN -> simplify
 - `validation-and-crosscutting.md`: validation, middleware, wrappers, idempotency, cache, and helpers.
 - `runtime-and-wiring.md`: CLI trees, scripts, configuration, DI, lifecycle, and error presentation.
 - `auth-and-access-control.md`: actors, authorization policy, tenant/resource access, and scoping.
-- `testing-strategy.md`: TDD details, scenario selection, test ownership, doubles, and verification.
+- `testing-strategy.md`: Python test ownership, pytest layout, doubles, integration boundaries, and
+  verification.
 - `quality-tooling.md`: formatting, lint, typing, complexity, dependency, and import-contract gates.
 - `observability-and-health.md`: logging, metrics, tracing, health, debug, and profiling.
 - `deployment-and-packaging.md`: images, Compose, Helm/Kubernetes, config, and secrets.

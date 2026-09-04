@@ -1,0 +1,4 @@
+interface:
+  display_name: "Devctl Obsidian React"
+  short_description: "Obsidian React plugin architecture"
+  default_prompt: "Use $devctl-obsidian-react to design or improve a production-ready Obsidian plugin with React, lifecycle safety, tests, Storybook, and release tooling."

@@ -1,0 +1,129 @@
+- description: Implement a CLI-backed filesystem feature from its public boundary
+  vars:
+    caseId: outside-in-cli-filesystem
+    request: |
+      Add a `runwatch create <name> --root <directory>` command and complete the feature behind it.
+      Help and invalid arguments must not initialize runtime dependencies. A valid command creates
+      one JSON task document named `<name>.json` below the configured root and reports the created
+      name. An existing task must preserve its document and expose the established conflict
+      category. Use the existing domain and runtime contracts, keep filesystem details private,
+      add appropriate owner tests, and finish with `go test ./...`.
+    fixtureDir: fixtures/outside-in-cli-filesystem
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    dependencySkillDirs: ../../skills/outside-in-tdd,../../skills/simplify-code
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: outside-in-tdd
+        beforeFileChangeRegex: (cmd|internal)[/\\]
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: simplify-code
+        afterProductionPathRegex: cmd[/\\]runwatch[/\\](?!.*_test\.go).*\.go
+        afterGreenCommandRegex: go test.*(cmd[/\\]runwatch|\./\.\.\.)
+        beforeFollowingFileChangeRegex: (cmd|internal)[/\\]
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^(cmd/runwatch/|internal/(service/task|repository/task|deps)/|go\.sum$)
+        requiredPathRegexes:
+          - cmd/runwatch/.*_test\.go$
+          - internal/service/task/.*_test\.go$
+          - internal/repository/task/.*_test\.go$
+          - internal/deps/.*_test\.go$
+          - .*/mocks/.*\.go$
+        forbiddenPathRegexes: [internal/domain/]
+        requiredContentRegexes:
+          - urfave/cli/v3
+          - type\s+Repository\s+interface
+          - '"encoding/json"'
+          - samber/do
+        forbiddenContentRegexes: ['map\[string\]any']
+        requiredProductionContentRegexes:
+          - 'type\s+Service\s+struct'
+          - 'type\s+[A-Z]\w*Repo\s+struct'
+          - 'go:generate\s+go tool\s+mockgen'
+          - '//\s+\w+[^\n]*\n\s*\w+\(ctx\s+context\.Context'
+        forbiddenProductionContentRegexes:
+          - 'type\s+(Service\s+interface|service\s+struct|ServiceImpl\s+struct)'
+          - 'type\s+(Repository|[a-z]\w*Repo|\w*(RepositoryImpl|RepoImpl))\s+struct'
+        requiredTestContentRegexes:
+          - '"github.com/stretchr/testify/require"'
+          - 'require\.'
+          - '"go.uber.org/mock/gomock"'
+          - 'gomock\.NewController\(t\)'
+          - '\.EXPECT\(\)'
+        forbiddenTestContentRegexes:
+          - '"github.com/stretchr/testify/assert"'
+          - 't\.(Error|Errorf|Fatal|Fatalf)\('
+          - 'type\s+(fake|stub|spy)\w*\s+struct'
+    - type: javascript
+      value: file://harness/assert-outside-in.mjs
+      config:
+        allProductionRegex: (cmd/runwatch/|internal/(service/task|repository/task|deps)/)(?!.*_test\.go).*\.go
+        forbiddenRedOutputRegex: no required module|missing go.sum|syntax error|expected 'package'
+        phases:
+          - label: CLI boundary
+            testPathRegex: cmd[/\\]runwatch[/\\].*_test\.go
+            commandRegex: go test.*(cmd[/\\]runwatch|\./\.\.\.)
+            productionPathRegex: cmd[/\\]runwatch[/\\](?!.*_test\.go).*\.go
+          - label: service boundary
+            testPathRegex: internal[/\\]service[/\\]task[/\\].*_test\.go
+            commandRegex: go test.*(internal[/\\]service[/\\]task|\./\.\.\.)
+            productionPathRegex: internal[/\\]service[/\\]task[/\\](?!.*_test\.go).*\.go
+          - label: repository boundary
+            testPathRegex: internal[/\\]repository[/\\]task[/\\].*_test\.go
+            commandRegex: go test.*(internal[/\\]repository[/\\]task|\./\.\.\.)
+            productionPathRegex: internal[/\\]repository[/\\]task[/\\](?!.*_test\.go).*\.go
+          - label: dependency wiring
+            testPathRegex: internal[/\\]deps[/\\].*_test\.go
+            commandRegex: go test.*(internal[/\\]deps|\./\.\.\.)
+            productionPathRegex: internal[/\\]deps[/\\](?!.*_test\.go).*\.go
+    - type: javascript
+      value: file://harness/assert-reference-order.mjs
+      config:
+        anyChangeRegex: ^(cmd/runwatch/|internal/)
+        allowedReferences:
+          - code-principles.md
+          - testing-strategy.md
+          - project-structure.md
+          - cmd.md
+          - service.md
+          - repository.md
+          - io-boundaries-and-platform.md
+          - dependency-wiring.md
+          - gomock-unit-tests.md
+          - go-generate.md
+        initialReferences:
+          - code-principles.md
+          - testing-strategy.md
+          - project-structure.md
+          - cmd.md
+          - gomock-unit-tests.md
+          - go-generate.md
+        stages:
+          - label: CLI
+            unlockProductionPathRegex: cmd[/\\]runwatch[/\\](?!.*_test\.go).*\.go
+            unlockCommandRegex: go test.*(cmd[/\\]runwatch|\./\.\.\.)
+            nextLabel: service
+            nextTestPathRegex: internal[/\\]service[/\\]task[/\\].*_test\.go
+            references: [service.md]
+          - label: service
+            unlockProductionPathRegex: internal[/\\]service[/\\]task[/\\](?!.*_test\.go).*\.go
+            unlockCommandRegex: go test.*(internal[/\\]service[/\\]task|\./\.\.\.)
+            nextLabel: repository
+            nextTestPathRegex: internal[/\\]repository[/\\]task[/\\].*_test\.go
+            references: [repository.md, io-boundaries-and-platform.md]
+          - label: repository
+            unlockProductionPathRegex: internal[/\\]repository[/\\]task[/\\](?!.*_test\.go).*\.go
+            unlockCommandRegex: go test.*(internal[/\\]repository[/\\]task|\./\.\.\.)
+            nextLabel: dependency wiring
+            nextTestPathRegex: internal[/\\]deps[/\\].*_test\.go
+            references: [dependency-wiring.md]

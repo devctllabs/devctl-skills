@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: Evaluate devctl-go
+
+prompts:
+  - |
+      Use $devctl-go from `.agents/skills/devctl-go` to complete the task below.
+
+      {{request}}
+
+      Inspect the existing repository and preserve its established contracts. Make only the
+      smallest task-relevant change and report the verification you actually ran.
+
+providers:
+  - id: openai:codex-sdk
+    label: candidate
+    config:
+      codex_path_override: codex
+      model: gpt-5.6-luna
+      model_reasoning_effort: high
+      working_dir: "{{workspaceDir}}"
+      sandbox_mode: workspace-write
+      approval_policy: never
+      network_access_enabled: false
+      web_search_mode: disabled
+      inherit_process_env: false
+      cli_env:
+        PATH: "{{workspaceDir}}/.skill-creator-evals-bin:{{ env.PATH }}"
+        GOCACHE: "/tmp/devctl-go-evals-gocache"
+        GOFLAGS: "-mod=readonly -p=1"
+        GOMAXPROCS: "2"
+      enable_streaming: true
+      persist_threads: false
+      skip_git_repo_check: false
+
+extensions:
+  - file://harness/workspace.mjs:workspaceHook
+
+tests:
+  - file://cases/*.yaml
+
+evaluateOptions:
+  maxConcurrency: 3
+  cache: false
+
+tracing:
+  enabled: true

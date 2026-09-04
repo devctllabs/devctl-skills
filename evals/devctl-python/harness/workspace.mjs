@@ -55,6 +55,40 @@ async function findExecutable(name) {
   throw new Error(`Required executable is not available: ${name}`);
 }
 
+function dependencySkillDirectories(value) {
+  if (value === undefined) {
+    return [];
+  }
+  if (typeof value !== "string") {
+    throw new Error("dependencySkillDirs must be a comma-separated string");
+  }
+  return value
+    .split(",")
+    .map((directory) => directory.trim())
+    .filter(Boolean);
+}
+
+async function injectSkill(workspace, sourceDirectory, expectedName) {
+  const source = resolveInput(sourceDirectory);
+  await readFile(path.join(source, "SKILL.md"), "utf8");
+  const name = path.basename(source);
+  if (expectedName && name !== expectedName) {
+    throw new Error(`Target skill name ${expectedName} does not match ${name}`);
+  }
+
+  const destination = path.join(workspace, ".agents", "skills", name);
+  await mkdir(path.dirname(destination), { recursive: true });
+  try {
+    await readdir(destination);
+    throw new Error(`Fixture already contains skill: ${destination}`);
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+  await cp(source, destination, { recursive: true });
+}
+
 async function prepare(context) {
   const vars = context.test.vars ?? {};
   if (!vars.fixtureDir || !vars.targetSkillDir || !vars.targetSkillName) {
@@ -62,11 +96,6 @@ async function prepare(context) {
   }
 
   const fixture = resolveInput(vars.fixtureDir);
-  const targetSkill = resolveInput(
-    process.env.SKILL_CREATOR_EVALS_TARGET_DIR || vars.targetSkillDir,
-  );
-  await readFile(path.join(targetSkill, "SKILL.md"), "utf8");
-
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "skill-creator-evals-"));
   try {
     const workspace = path.join(tempRoot, "workspace");
@@ -96,17 +125,14 @@ async function prepare(context) {
       await symlink(await findExecutable(name), path.join(toolDirectory, name));
     }
 
-    const injectedSkill = path.join(workspace, ".agents", "skills", vars.targetSkillName);
-    await mkdir(path.dirname(injectedSkill), { recursive: true });
-    try {
-      await readdir(injectedSkill);
-      throw new Error(`Fixture already contains target skill: ${injectedSkill}`);
-    } catch (error) {
-      if (error.code !== "ENOENT") {
-        throw error;
-      }
+    await injectSkill(
+      workspace,
+      process.env.SKILL_CREATOR_EVALS_TARGET_DIR || vars.targetSkillDir,
+      vars.targetSkillName,
+    );
+    for (const dependencyDirectory of dependencySkillDirectories(vars.dependencySkillDirs)) {
+      await injectSkill(workspace, dependencyDirectory);
     }
-    await cp(targetSkill, injectedSkill, { recursive: true });
 
     git(workspace, ["init", "--quiet"]);
     git(workspace, ["config", "user.name", "Skill Creator Evals"]);

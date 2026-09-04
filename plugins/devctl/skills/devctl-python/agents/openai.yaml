@@ -1,4 +1,4 @@
 interface:
   display_name: "Devctl Python"
   short_description: "Python services, libraries, packages"
-  default_prompt: "Use $devctl-python to preserve this repository's conventions while applying typed application boundaries or library-owned dependency interfaces, explicit I/O adapters, scenario-sized RED/GREEN/refactor cycles, and appropriate tooling."
+  default_prompt: "Use $devctl-python to preserve Python conventions and boundaries, composing $outside-in-tdd for handwritten production behavior."

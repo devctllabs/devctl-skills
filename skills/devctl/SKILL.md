@@ -1,6 +1,6 @@
 ---
 name: devctl
-description: Use when interviewing for project shape, creating or updating devctl.yaml manifests, using the devctl CLI for project initialization, component enablement, source synchronization, contract linting, scaffold/code generation, generated-code refreshes, or routing work to Devctl language and contract skills such as devctl-go, devctl-rust, devctl-openapi, devctl-react-vite, or future devctl-python.
+description: Use when interviewing for project shape, creating or updating devctl.yaml manifests, using the devctl CLI for project initialization, component enablement, source synchronization, contract linting, scaffold/code generation, generated-code refreshes, or routing work to Devctl language and contract skills such as devctl-go, devctl-rust, devctl-openapi, devctl-react-vite, devctl-obsidian-react, or future devctl-python.
 ---
 
 # Devctl
@@ -40,5 +40,7 @@ Use this skill as the entrypoint for Devctl-managed projects. It owns the manife
 - Treat `devctl validate`, `devctl inspect`, `devctl sync`, `devctl gen`, and `devctl lint` as the authoritative workflow for manifest validation, resolved defaults, source materialization, generated outputs, and contract lint. This skill documents the expected CLI contract; it does not replace the CLI validator/generator/linter.
 - Treat `devctl.yaml` as the project manifest for architecture, environment, runtime activation, and generator settings. Proto, OpenAPI, and JSON Schema files still define API/message contract content.
 - Treat `.mise.toml` as the standard project-local toolchain and task surface for Devctl-scaffolded projects. Repos own future tool version updates after scaffold; generation should preflight tools and fail with `mise install` guidance instead of installing tools implicitly.
+- Keep DB migrations on each SQLite/PostgreSQL variant. Devctl owns their directories and `.mise.toml` golang-migrate tasks, but never applies migrations or adds the migration CLI to application runtime dependencies.
+- Model Redis as named `connections[]` with `addr_env` and optional credential-free `addr_default`; there is no default/primary Redis connection flag.
 - Keep generated outputs under configured generator paths or existing generated directories. Do not hand-edit generated outputs.
 - For unsupported language skills, stop after manifest/CLI work and explain that handwritten implementation guidance needs a dedicated language skill.

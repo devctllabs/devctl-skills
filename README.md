@@ -14,6 +14,41 @@ An explicit-only modifier that applies DRY, YAGNI, KISS, and SOLID pragmatically
 It favors the simplest complete result, avoids repetition and speculative scope, and keeps
 responsibilities and dependencies clear.
 
+### outside-in-tdd
+
+A language-neutral outside-in TDD process for handwritten production behavior.
+
+**Use when:**
+
+- Growing a feature from its caller-visible boundary
+- Fixing a bug regression-first
+- Evolving a public contract through tests
+- Establishing GREEN characterization before a behavior-preserving refactor
+
+**Covers:**
+
+- Scenario-sized RED/GREEN/SIMPLIFY cycles
+- ZOM progression with continuous Boundary, Interface, and Exception checks
+- Natural GREEN, owner checkpoints, and outside-in descent
+- Post-GREEN composition with `simplify-code`
+
+### simplify-code
+
+Behavior-preserving simplification for a current change, complex function, section, or module.
+
+**Use when:**
+
+- Reducing nested control flow, duplication, or unnecessary indirection
+- Simplifying a targeted module without changing its public behavior
+- Running the simplification phase after a TDD GREEN
+
+**Covers:**
+
+- Scope control and GREEN safety nets
+- Public characterization when existing coverage is insufficient
+- Private-structure refactoring under a frozen behavior oracle
+- Safe migration away from implementation-coupled tests
+
 ### devctl
 
 The entrypoint for Devctl-managed projects, manifests, CLI workflows, and
@@ -109,6 +144,24 @@ React + Vite + TypeScript project structure guidance for feature-oriented apps.
 - React Hook Form, Zod validation, i18n resources, and document locale metadata
 - Storybook stories, UI loading/error/empty states, and testing conventions
 
+### devctl-obsidian-react
+
+Obsidian plugin architecture guidance for TypeScript plugins with React surfaces.
+
+**Use when:**
+
+- Creating, organizing, refactoring, reviewing, or releasing Obsidian plugins
+- Building React views or complex settings inside the Obsidian host lifecycle
+- Adding vault operations, commands, events, mobile support, or plugin persistence
+- Establishing Vitest, Storybook, real-Obsidian E2E, CI, or release packaging
+
+**Covers:**
+
+- Scale-sensitive project structure and narrow Obsidian adapter boundaries
+- React mount/unmount ownership, host-native UI, and Obsidian-safe styling
+- Settings migrations, state subscriptions, data safety, mobile, security, and performance
+- esbuild production bundles, Storybook/Vitest isolation, sandbox-vault E2E, and releases
+
 ### devctl-rust
 
 Rust architecture guidance for reusable crates, Cargo workspaces, servers,
@@ -159,6 +212,9 @@ Use $pragmatic-work to keep this task simple, focused, and well-structured.
 Use $devctl to create a project manifest and choose the implementation skill.
 Use $devctl-openapi to add a resource domain to an OpenAPI 3.1 contract.
 Use $devctl-react-vite to organize a React + Vite TypeScript application.
+Use $devctl-obsidian-react to build a lifecycle-safe Obsidian plugin with React surfaces.
+Use $outside-in-tdd to grow a behavior through scenario-sized TDD cycles.
+Use $simplify-code to reduce cognitive complexity without changing public behavior.
 ```
 
 Skills use progressive disclosure: start with `SKILL.md`, then load only the
@@ -166,9 +222,9 @@ references relevant to the task.
 
 ## Plugin Maintenance
 
-The root `skills/devctl*` directories are the source of truth. The installable
-bundle under `plugins/devctl/skills/` is generated and committed to the
-repository.
+The root `skills/devctl*`, `skills/outside-in-tdd`, and `skills/simplify-code` directories are the
+source of truth. The installable bundle under `plugins/devctl/skills/` is generated and committed
+to the repository.
 
 Regenerate the bundle after changing a Devctl skill:
 
@@ -182,8 +238,8 @@ Check for drift without modifying files:
 python3 scripts/sync_devctl_plugin.py --check
 ```
 
-The synchronizer automatically includes current and future skill directories
-named `devctl` or `devctl-*`.
+The synchronizer includes current and future directories named `devctl` or `devctl-*` plus the
+shared composition skills `outside-in-tdd` and `simplify-code`.
 
 ## Skill Structure
 

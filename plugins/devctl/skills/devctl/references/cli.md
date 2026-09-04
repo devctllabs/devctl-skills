@@ -11,7 +11,10 @@ command -v devctl
 devctl --help
 ```
 
-If the CLI is unavailable, edit `devctl.yaml` directly and state that generation was not run.
+If the CLI is unavailable, edit `devctl.yaml` directly. Generation normally remains skipped. An
+already-scaffolded repository may instead run its pinned project-local generator task when the
+contract, generator config, and output path are all explicit; state that Devctl validation and
+generation orchestration did not run.
 
 Before using a subcommand or flag that is not already established in the repo, inspect help first:
 
@@ -79,7 +82,9 @@ devctl lint
 Initialize:
 
 ```bash
-devctl init --lang go --name myapp
+devctl init manifest --lang go --preset http-service --name myapp --module github.com/acme/myapp
+# Complete or mutate devctl.yaml, then materialize the foundation:
+devctl init scaffold
 ```
 
 Validate and inspect:
@@ -99,8 +104,9 @@ Enable singleton capabilities:
 devctl enable http
 devctl enable grpc
 devctl enable http --always
-devctl enable metrics
 devctl enable logging
+devctl enable health
+devctl enable telemetry
 devctl enable pprof
 ```
 
@@ -109,8 +115,10 @@ Add named resources:
 ```bash
 devctl add db primary --kind sqlite --default
 devctl add db primary --kind postgres
+devctl add db archive --kind postgres --migrations-path db/archive
+devctl add db scratch --kind sqlite --no-migrations
 devctl add db analytics --kind clickhouse
-devctl add redis cache
+devctl add redis cache --addr-default localhost:6379
 devctl add s3 uploads
 devctl add s3-connection archive
 devctl add s3 exports --connection archive
@@ -131,8 +139,11 @@ DB command rules:
 - `devctl add db <name> --kind <kind>` creates a logical DB connection when `<name>` is new.
 - Running it again with the same `<name>` and a different `--kind` adds a backend variant to that logical DB.
 - `--default` sets the default backend variant for that logical DB.
+- SQLite and PostgreSQL variants get migrations by default at `migrations/<connection>/<variant>`.
+- `--migrations-path <path>` overrides that directory; `--no-migrations` opts out. The two flags are mutually exclusive and are invalid for ClickHouse.
+- Migration commands are scaffolded as `mise run migrate:<connection>:<variant>:{create,up,down}`; Devctl never applies migrations itself.
 - Generated config should select backend with `kind_env`, defaulting to `DB_<NAME>_KIND`.
-- Redis is not a DB variant. Use `devctl add redis <name>`.
+- Redis is not a DB variant and has no default selector. Use `devctl add redis <name> [--addr-env <ENV>] [--addr-default <address>]`.
 
 S3 command rules:
 
@@ -199,6 +210,11 @@ devctl gen grpc --target grpc-client:billing --dry-run
 
 `gen` writes generated outputs from local or already synchronized inputs. It should fail with actionable `devctl sync ...` guidance when required external artifacts are absent or stale; it should not synchronize sources implicitly.
 
+For a Go HTTP server, `devctl gen http --target http-server` resolves the OpenAPI input, passes
+`oapi_config`, and writes `<server_out>/server.gen.go`. The native config owns
+generation flags, while the manifest owns the output path. Devctl must reject competing output
+ownership, require the project-pinned tool, and leave handwritten transport/DI files untouched.
+
 Lint contracts:
 
 ```bash
@@ -226,6 +242,8 @@ Use this section to understand what the CLI owns. Do not manually reimplement th
 - `inspect` owns resolved defaults and effective configuration, including default contract paths, generated output paths, env names, selected DB variants, and generation targets.
 - `sync` owns materializing external contracts under managed generated input directories.
 - `gen` owns writing generated outputs under configured or default generated directories from local or already synchronized inputs.
+- Go HTTP generation owns the `oapi-codegen` invocation and output file location; the native config
+  must not override the manifest-owned `server_out`.
 - `gen config` owns generated config outputs such as `.env.example`, Helm values, and `gen/config/config.go` or the language-specific equivalent.
 - `lint` owns contract-content checks for local or already synchronized inputs. It must not auto-sync, fix files, or run language code lint.
 - If `validate` is unavailable, perform only best-effort YAML/repo review and report that CLI validation did not run.
@@ -244,7 +262,7 @@ Use CLI when:
 
 - starting a new project from scratch;
 - enabling a standard component with default shape;
-- adding named resources such as DB connections, Redis instances, S3 buckets, clients, Kafka consumers, or Kafka producers;
+- adding named resources such as DB connections, Redis connections, S3 buckets, clients, Kafka consumers, or Kafka producers;
 - validating or inspecting the effective manifest view;
 - synchronizing external source artifacts;
 - linting contracts;
@@ -292,16 +310,17 @@ Do not add `start` to Kafka producers.
 For a new Go service with HTTP and Kafka:
 
 ```bash
-devctl init --lang go --name user-service
+devctl init manifest --lang go --preset http-service --name user-service --module github.com/acme/user-service
 devctl enable http
 devctl add db primary --kind sqlite --default
 devctl add db primary --kind postgres
-devctl add redis cache
+devctl add redis cache --addr-default localhost:6379
 devctl add s3 uploads
 devctl add kafka-consumer users --topic user_service.user.events.v1
+devctl init scaffold
+mise install
 devctl validate
 devctl inspect
-mise install
 devctl lint http
 devctl lint kafka
 devctl gen config
@@ -335,6 +354,8 @@ When finishing CLI work, report:
 - source synchronization skipped or failed, if applicable;
 - contract lint skipped or failed, if applicable;
 - generation skipped because CLI was unavailable, if applicable;
+- direct pinned generation used as a CLI-unavailable fallback, if applicable, together with the
+  fact that Devctl validation did not run;
 - generation skipped because project-local tools were unavailable, if applicable;
 - generated files/directories changed;
 - follow-up implementation skill used or recommended.

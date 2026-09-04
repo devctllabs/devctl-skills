@@ -105,7 +105,7 @@ deploy/
 
 Do not force every project into every folder. Add directories only when the project ships that
 surface or owns that boundary. Tests use a type-first, layer-second layout; see
-`testing-strategy.md` for the mandatory outside-in TDD flow and complete test rules.
+`testing-strategy.md` for Python-specific placement and boundary rules.
 
 For a CLI-only library or small tool, a smaller shape is fine:
 

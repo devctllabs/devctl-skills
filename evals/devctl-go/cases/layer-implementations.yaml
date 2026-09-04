@@ -1,0 +1,556 @@
+- description: Implement a domain lifecycle from business vocabulary
+  vars:
+    caseId: domain-run-lifecycle
+    request: |
+      Implement the task-run business model and its owner tests from scratch. A run starts pending,
+      may start once, and may then finish successfully or fail once.
+      Invalid transitions must expose a stable error category while retaining the run identifier
+      and attempted transition as structured facts. Do not add unrelated application layers.
+      Finish with `go test ./...`.
+    fixtureDir: fixtures/domain-run-lifecycle
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^internal/domain/
+        requiredPathRegexes: [internal/domain/, _test\.go$]
+        requiredContentRegexes: [type\s+\w*Command\s+struct, Unwrap\(\)\s+error]
+        forbiddenContentRegexes: ['"(database/sql|net/http|os/exec)"']
+        requiredTestContentRegexes: ['"github.com/stretchr/testify/require"', 'require\.']
+        forbiddenTestContentRegexes: ['"github.com/stretchr/testify/assert"', 't\.(Error|Errorf|Fatal|Fatalf)\(']
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        forbiddenRedOutputRegex: no required module|missing go.sum|syntax error|expected 'package'
+        phases:
+          - label: domain lifecycle
+            mode: tdd
+            testPathRegex: internal[/\\]domain[/\\].*_test\.go
+            commandRegex: go test.*(internal[/\\]domain|\./\.\.\.)
+            productionPathRegex: internal[/\\]domain[/\\](?!.*_test\.go).*\.go
+
+- description: Implement a service operation with consumer-owned capabilities
+  vars:
+    caseId: service-start-run
+    request: |
+      Implement the run-start business operation and its owner tests from scratch. The operation
+      must load the run, reject a non-pending run, reserve
+      execution through the existing executor capability, persist the running state, and return
+      the updated view. Preserve not-found, conflict, and unavailable error categories. Do not add
+      delivery or infrastructure work. Finish with `go test ./...`.
+    fixtureDir: fixtures/service-start-run
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^internal/service/
+        requiredPathRegexes: [internal/service/, internal/service/.*/mocks/.*\.go$, _test\.go$]
+        requiredContentRegexes: [type\s+Repository\s+interface, type\s+\w*(Executor|Client)\s+interface]
+        forbiddenContentRegexes: ['"(database/sql|net/http|os|os/exec)"']
+        requiredProductionContentRegexes:
+          - 'type\s+Service\s+struct'
+          - 'go:generate\s+go tool\s+mockgen'
+          - '//\s+\w+[^\n]*\n\s*\w+\(ctx\s+context\.Context'
+        forbiddenProductionContentRegexes: ['type\s+(Service\s+interface|service\s+struct|ServiceImpl\s+struct)']
+        requiredTestContentRegexes:
+          - '"github.com/stretchr/testify/require"'
+          - 'require\.'
+          - '"go.uber.org/mock/gomock"'
+          - 'gomock\.NewController\(t\)'
+          - '\.EXPECT\(\)'
+        forbiddenTestContentRegexes:
+          - '"github.com/stretchr/testify/assert"'
+          - 't\.(Error|Errorf|Fatal|Fatalf)\('
+          - 'type\s+(fake|stub|spy)\w*\s+struct'
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        forbiddenRedOutputRegex: no required module|missing go.sum|syntax error|expected 'package'
+        phases:
+          - label: start-run service
+            mode: tdd
+            testPathRegex: internal[/\\]service[/\\].*_test\.go
+            commandRegex: go test.*(internal[/\\]service|\./\.\.\.)
+            productionPathRegex: internal[/\\]service[/\\](?!.*_test\.go).*\.go
+
+- description: Implement a reusable multi-service usecase
+  vars:
+    caseId: usecase-dispatch-run
+    request: |
+      Implement the reusable task-run dispatch flow and its owner tests from scratch. The flow
+      starts the run through the run service, submits the resulting
+      run through the executor service, and marks the run failed when submission fails. Return the
+      submission result on success and preserve the original submission error after successful
+      compensation. Finish with `go test ./...`.
+    fixtureDir: fixtures/usecase-dispatch-run
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^internal/usecase/
+        requiredPathRegexes: [internal/usecase/, internal/usecase/.*/mocks/.*\.go$, _test\.go$]
+        requiredContentRegexes: [internal/domain/run]
+        forbiddenContentRegexes: [internal/(service|repository|client|transport)]
+        requiredProductionContentRegexes:
+          - 'type\s+[A-Z]\w*Uc\s+struct'
+          - 'type\s+\w+\s+interface\s*\{[^}]*Start'
+          - 'type\s+\w+\s+interface\s*\{[^}]*Submit'
+          - 'go:generate\s+go tool\s+mockgen'
+          - '//\s+Start\b[^\n]*\n\s*Start\(ctx\s+context\.Context'
+          - '//\s+Submit\b[^\n]*\n\s*Submit\(ctx\s+context\.Context'
+        forbiddenProductionContentRegexes: ['type\s+(UseCase|[a-z]\w*Uc|\w*(UseCaseImpl|UcImpl))\s+struct']
+        requiredTestContentRegexes:
+          - '"github.com/stretchr/testify/require"'
+          - 'require\.'
+          - '"go.uber.org/mock/gomock"'
+          - 'gomock\.NewController\(t\)'
+          - '\.EXPECT\(\)'
+        forbiddenTestContentRegexes:
+          - '"github.com/stretchr/testify/assert"'
+          - 't\.(Error|Errorf|Fatal|Fatalf)\('
+          - 'type\s+(fake|stub|spy)\w*\s+struct'
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        forbiddenRedOutputRegex: no required module|missing go.sum|syntax error|expected 'package'
+        phases:
+          - label: dispatch usecase
+            mode: tdd
+            testPathRegex: internal[/\\]usecase[/\\].*_test\.go
+            commandRegex: go test.*(internal[/\\]usecase|\./\.\.\.)
+            productionPathRegex: internal[/\\]usecase[/\\](?!.*_test\.go).*\.go
+
+- description: Implement an atomic filesystem repository
+  vars:
+    caseId: repository-run-store
+    request: |
+      Implement task-run persistence and real-filesystem owner tests from scratch. Persist one JSON
+      document per run below a configured root, create missing
+      directories, and publish atomically without replacing an existing document when publication
+      fails. Map a missing run to the established not-found category and malformed stored data to
+      the established internal category. Keep storage layout and JSON details private. Finish with
+      `go test ./...`.
+    fixtureDir: fixtures/repository-run-store
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^internal/repository/
+        requiredPathRegexes: [internal/repository/, _test\.go$]
+        requiredContentRegexes: ['"encoding/json"', '"os"']
+        forbiddenContentRegexes: ['"net/http"']
+        requiredProductionContentRegexes: ['type\s+[A-Z]\w*Repo\s+struct']
+        forbiddenProductionContentRegexes: ['type\s+(Repository|[a-z]\w*Repo|\w*(RepositoryImpl|RepoImpl))\s+struct']
+        requiredTestContentRegexes: ['"github.com/stretchr/testify/require"', 'require\.']
+        forbiddenTestContentRegexes: ['"github.com/stretchr/testify/assert"', 't\.(Error|Errorf|Fatal|Fatalf)\(']
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        forbiddenRedOutputRegex: no required module|missing go.sum|syntax error|expected 'package'
+        phases:
+          - label: filesystem repository
+            mode: tdd
+            testPathRegex: internal[/\\]repository[/\\].*_test\.go
+            commandRegex: go test.*(internal[/\\]repository|\./\.\.\.)
+            productionPathRegex: internal[/\\]repository[/\\](?!.*_test\.go).*\.go
+
+- description: Implement a subprocess client
+  vars:
+    caseId: client-codex-runner
+    request: |
+      Implement the Codex subprocess integration and its owner tests from scratch. Pass the run
+      identifier and prompt as distinct arguments, capture trimmed stdout
+      as the execution identifier, honor cancellation, and normalize non-zero exits or malformed
+      empty output into the established unavailable category. Finish with `go test ./...`.
+    fixtureDir: fixtures/client-codex-runner
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^internal/client/
+        requiredPathRegexes: [internal/client/, _test\.go$]
+        requiredContentRegexes: ['"os/exec"', context\.Context]
+        forbiddenContentRegexes: ['"net/http"']
+        requiredTestContentRegexes: ['"github.com/stretchr/testify/require"', 'require\.']
+        forbiddenTestContentRegexes: ['"github.com/stretchr/testify/assert"', 't\.(Error|Errorf|Fatal|Fatalf)\(']
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        forbiddenRedOutputRegex: no required module|missing go.sum|syntax error|expected 'package'
+        phases:
+          - label: subprocess client
+            mode: tdd
+            testPathRegex: internal[/\\]client[/\\].*_test\.go
+            commandRegex: go test.*(internal[/\\]client|\./\.\.\.)
+            productionPathRegex: internal[/\\]client[/\\](?!.*_test\.go).*\.go
+
+- description: Implement an HTTP delivery adapter
+  vars:
+    caseId: transport-http-start-run
+    request: |
+      Implement `POST /runs/{id}/start` and its owner tests from scratch. A valid request calls the
+      existing start operation and returns the updated run as
+      JSON with status 200. An empty identifier maps to 400, a missing run to 404, a conflict to
+      409, and an unexpected failure to 500 without leaking internal error text. Finish with
+      `go test ./...`.
+    fixtureDir: fixtures/transport-http-start-run
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^internal/transport/serverhttp/
+        requiredPathRegexes: [internal/transport/serverhttp/, internal/transport/serverhttp/mocks/.*\.go$, _test\.go$]
+        requiredContentRegexes: ['"net/http"', internal/domain/run]
+        forbiddenContentRegexes: [internal/(service|repository|client|deps)]
+        requiredProductionContentRegexes:
+          - 'type\s+\w+\s+interface\s*\{[^}]*Start'
+          - 'go:generate\s+go tool\s+mockgen'
+          - '//\s+Start\b[^\n]*\n\s*Start\(ctx\s+context\.Context'
+        requiredTestContentRegexes:
+          - '"github.com/stretchr/testify/require"'
+          - 'require\.'
+          - '"go.uber.org/mock/gomock"'
+          - 'gomock\.NewController\(t\)'
+          - '\.EXPECT\(\)'
+        forbiddenTestContentRegexes:
+          - '"github.com/stretchr/testify/assert"'
+          - 't\.(Error|Errorf|Fatal|Fatalf)\('
+          - 'type\s+(fake|stub|spy)\w*\s+struct'
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        forbiddenRedOutputRegex: no required module|missing go.sum|syntax error|expected 'package'
+        phases:
+          - label: HTTP transport
+            mode: tdd
+            testPathRegex: internal[/\\]transport[/\\]serverhttp[/\\].*_test\.go
+            commandRegex: go test.*(serverhttp|\./\.\.\.)
+            productionPathRegex: internal[/\\]transport[/\\]serverhttp[/\\](?!.*_test\.go).*\.go
+
+- description: Implement a generated-contract gRPC adapter
+  vars:
+    caseId: transport-grpc-start-run
+    request: |
+      Implement the generated StartRun RPC and its owner tests from scratch. Validate the request
+      identifier, call the existing start operation, and map the
+      result to the generated reply. Use the generated status contract to map invalid input,
+      missing runs, conflicts, and unexpected failures without leaking internal error text. Finish
+      with `go test ./...`.
+    fixtureDir: fixtures/transport-grpc-start-run
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^internal/transport/servergrpc/
+        requiredPathRegexes: [internal/transport/servergrpc/, internal/transport/servergrpc/mocks/.*\.go$, _test\.go$]
+        requiredContentRegexes: [gen/servergrpc, StatusError, internal/domain/run]
+        forbiddenContentRegexes: [internal/(service|repository|client|deps)]
+        requiredProductionContentRegexes:
+          - 'type\s+\w+\s+interface\s*\{[^}]*Start'
+          - 'go:generate\s+go tool\s+mockgen'
+          - '//\s+Start\b[^\n]*\n\s*Start\(ctx\s+context\.Context'
+        requiredTestContentRegexes:
+          - '"github.com/stretchr/testify/require"'
+          - 'require\.'
+          - '"go.uber.org/mock/gomock"'
+          - 'gomock\.NewController\(t\)'
+          - '\.EXPECT\(\)'
+        forbiddenTestContentRegexes:
+          - '"github.com/stretchr/testify/assert"'
+          - 't\.(Error|Errorf|Fatal|Fatalf)\('
+          - 'type\s+(fake|stub|spy)\w*\s+struct'
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        forbiddenRedOutputRegex: no required module|missing go.sum|syntax error|expected 'package'
+        phases:
+          - label: gRPC transport
+            mode: tdd
+            testPathRegex: internal[/\\]transport[/\\]servergrpc[/\\].*_test\.go
+            commandRegex: go test.*(servergrpc|\./\.\.\.)
+            productionPathRegex: internal[/\\]transport[/\\]servergrpc[/\\](?!.*_test\.go).*\.go
+
+- description: Implement a Kafka consumer with explicit failure policy
+  vars:
+    caseId: kafka-run-consumer
+    request: |
+      Implement the task-run start consumer and its owner tests from scratch. Decode the JSON run
+      identifier, call the existing start operation, acknowledge
+      success and business conflicts, send malformed messages to the DLQ, retry unavailable
+      failures without acknowledging, and stop cleanly on cancellation. Finish with
+      `go test ./...`.
+    fixtureDir: fixtures/kafka-run-consumer
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^internal/transport/consumerkafka/
+        requiredPathRegexes: [internal/transport/consumerkafka/, internal/transport/consumerkafka/mocks/.*\.go$, _test\.go$]
+        requiredContentRegexes: ['"encoding/json"', internal/broker, internal/domain/run]
+        forbiddenContentRegexes: [internal/(service|repository|client|deps)]
+        requiredProductionContentRegexes:
+          - 'type\s+\w+\s+interface\s*\{[^}]*Start'
+          - 'go:generate\s+go tool\s+mockgen'
+          - '//\s+Start\b[^\n]*\n\s*Start\(ctx\s+context\.Context'
+        requiredTestContentRegexes:
+          - '"github.com/stretchr/testify/require"'
+          - 'require\.'
+          - '"go.uber.org/mock/gomock"'
+          - 'gomock\.NewController\(t\)'
+          - '\.EXPECT\(\)'
+        forbiddenTestContentRegexes:
+          - '"github.com/stretchr/testify/assert"'
+          - 't\.(Error|Errorf|Fatal|Fatalf)\('
+          - 'type\s+(fake|stub|spy)\w*\s+struct'
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        forbiddenRedOutputRegex: no required module|missing go.sum|syntax error|expected 'package'
+        phases:
+          - label: Kafka consumer
+            mode: tdd
+            testPathRegex: internal[/\\]transport[/\\]consumerkafka[/\\].*_test\.go
+            commandRegex: go test.*(consumerkafka|\./\.\.\.)
+            productionPathRegex: internal[/\\]transport[/\\]consumerkafka[/\\](?!.*_test\.go).*\.go
+
+- description: Implement a thin service CLI
+  vars:
+    caseId: cmd-runwatch
+    request: |
+      Implement the service CLI and its owner tests from scratch. Add a root command and
+      `consumer <name>` leaf. Help must describe purpose and arguments without
+      initializing runtime dependencies. Bind the typed positional name into the leaf's `CmdOpts`
+      through `Command.Arguments` and `Destination`; `ArgsUsage` alone is insufficient. Executing
+      the leaf must reject a missing name with usage status, construct the existing runtime
+      container once, resolve and run the named consumer, and close the container while preserving
+      run and close failures. Finish with `go test ./...`.
+    fixtureDir: fixtures/cmd-runwatch
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^(cmd/runwatch/|go\.sum$)
+        requiredPathRegexes: [cmd/runwatch/, 'cmd/runwatch/(.*/)?mocks/.*\.go$', _test\.go$]
+        requiredContentRegexes: [urfave/cli/v3, internal/deps]
+        forbiddenContentRegexes: [internal/(service|repository|client|transport)]
+        requiredProductionContentRegexes:
+          - 'go:generate\s+go tool\s+mockgen'
+          - 'type\s+consumerCmdOpts\s+struct\s*\{[^}]*name\s+string'
+          - 'Arguments:\s*\[\]cli\.Argument'
+          - '&cli\.StringArg\s*\{[^}]*Destination:\s*&\w+\.opts\.name'
+        forbiddenProductionContentRegexes:
+          - 'Args\(\)\.(First|Get)\('
+        requiredTestContentRegexes:
+          - '"github.com/stretchr/testify/require"'
+          - 'require\.'
+          - '"go.uber.org/mock/gomock"'
+          - 'gomock\.NewController\(t\)'
+          - '\.EXPECT\(\)'
+        forbiddenTestContentRegexes:
+          - '"github.com/stretchr/testify/assert"'
+          - 't\.(Error|Errorf|Fatal|Fatalf)\('
+          - 'type\s+(fake|stub|spy)\w*\s+struct'
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        forbiddenRedOutputRegex: no required module|missing go.sum|syntax error|expected 'package'
+        phases:
+          - label: service CLI
+            mode: tdd
+            testPathRegex: cmd[/\\]runwatch[/\\].*_test\.go
+            commandRegex: go test.*(cmd[/\\]runwatch|\./\.\.\.)
+            productionPathRegex: cmd[/\\]runwatch[/\\](?!.*_test\.go).*\.go
+
+- description: Refactor a nested CLI by command ownership
+  vars:
+    caseId: cmd-nested-layout
+    request: |
+      Treat this growing nested VIA CLI as an unstructured scaffold and refactor it without changing
+      its public syntax or output. Apply the project's normative command ownership rather than
+      preserving the scaffold's flat conventions, so each command remains independently readable
+      and testable as more leaves are added. Keep `main` limited to process and root-command concerns;
+      runtime construction must remain lazy inside only the selected executable leaf. Root, group,
+      and leaf help must not construct dependencies. Preserve or strengthen focused command tests,
+      run a GREEN baseline before the refactor, and finish with `go test ./...`.
+    fixtureDir: fixtures/cmd-nested-layout
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^cmd/via/
+        requiredPathRegexes:
+          - cmd/via/main\.go$
+          - cmd/via/internal/config/path\.go$
+          - cmd/via/internal/config/validate\.go$
+          - cmd/via/internal/package/list\.go$
+          - cmd/via/internal/.*/mocks/.*\.go$
+          - _test\.go$
+        requiredWorkspacePathRegexes:
+          - cmd/via/internal/config/config\.go$
+          - cmd/via/internal/config/path\.go$
+          - cmd/via/internal/config/validate\.go$
+          - cmd/via/internal/package/package\.go$
+          - cmd/via/internal/package/list\.go$
+        forbiddenWorkspacePathRegexes:
+          - cmd/via/internal/commands\.go$
+          - cmd/via/internal/root\.go$
+        requiredContentRegexes:
+          - type\s+pathCmd\s+struct
+          - type\s+pathCmdOpts\s+struct
+          - type\s+validateCmd\s+struct
+          - type\s+validateCmdOpts\s+struct
+          - type\s+listCmd\s+struct
+          - type\s+listCmdOpts\s+struct
+          - 'Destination:'
+          - 'go:generate\s+go tool\s+mockgen'
+        forbiddenContentRegexes:
+          - type\s+Dependencies\s+interface
+          - type\s+DependenciesBuilder
+        requiredTestContentRegexes:
+          - '"github.com/stretchr/testify/require"'
+          - 'require\.'
+          - '"go.uber.org/mock/gomock"'
+          - 'gomock\.NewController\(t\)'
+          - '\.EXPECT\(\)'
+        forbiddenTestContentRegexes:
+          - '"github.com/stretchr/testify/assert"'
+          - 't\.(Error|Errorf|Fatal|Fatalf)\('
+          - 'type\s+(fake|stub|spy)\w*\s+struct'
+        fileContentRules:
+          - path: cmd/via/main.go
+            requiredRegexes:
+              - 'signal\.NotifyContext'
+              - 'cli\.Command'
+            forbiddenRegexes:
+              - 'internal/deps'
+              - 'type\s+appDependencies'
+              - 'func\s+\([^)]*\)\s+(Config|Packages)\('
+          - path: cmd/via/internal/config/config.go
+            requiredRegexes:
+              - 'func\s+NewCmd\('
+            forbiddenRegexes:
+              - 'type\s+\w*Cmd\s+struct'
+              - 'type\s+\w*CmdOpts\s+struct'
+          - path: cmd/via/internal/config/path.go
+            requiredRegexes:
+              - 'internal/deps'
+              - 'type\s+pathCmd\s+struct'
+              - 'type\s+pathCmdOpts\s+struct'
+              - 'Destination:'
+          - path: cmd/via/internal/package/package.go
+            requiredRegexes:
+              - 'func\s+NewCmd\('
+            forbiddenRegexes:
+              - 'type\s+\w*Cmd\s+struct'
+              - 'type\s+\w*CmdOpts\s+struct'
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        phases:
+          - label: nested CLI refactor
+            mode: baseline
+            commandRegex: go test.*(cmd/via|\./\.\.\.)
+            productionPathRegex: cmd[/\\]via[/\\](?!.*_test\.go).*\.go
+    - type: javascript
+      value: file://harness/assert-reference-order.mjs
+      config:
+        anyChangeRegex: cmd/via/
+        allowedReferences: [code-principles.md, testing-strategy.md, project-structure.md, cmd.md, dependency-wiring.md, gomock-unit-tests.md, go-generate.md]
+        initialReferences: [code-principles.md, testing-strategy.md, project-structure.md, cmd.md, gomock-unit-tests.md, go-generate.md]
+
+- description: Implement dependency wiring and shutdown
+  vars:
+    caseId: dependency-wiring
+    request: |
+      Implement the runtime composition root and its integration owner tests from scratch.
+      Construct the existing repository, executor, service, HTTP handler, and
+      two named consumers from typed config. Expose typed getters for the handler and external
+      consumer names. Register cleanup in construction order and shut resources down once in
+      reverse order while joining cleanup failures. Finish with `go test ./...`.
+    fixtureDir: fixtures/dependency-wiring
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+    toolExecutables: go
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: devctl-go }
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        allowedPathRegex: ^(internal/deps/|go\.sum$)
+        requiredPathRegexes: [internal/deps/, _test\.go$]
+        requiredContentRegexes: [samber/do, ProvideNamed, Shutdown]
+        forbiddenContentRegexes: [zap.ReplaceGlobals]
+        requiredTestContentRegexes: ['"github.com/stretchr/testify/require"', 'require\.']
+        forbiddenTestContentRegexes: ['"github.com/stretchr/testify/assert"', 't\.(Error|Errorf|Fatal|Fatalf)\(']
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        forbiddenRedOutputRegex: no required module|missing go.sum|syntax error|expected 'package'
+        phases:
+          - label: dependency wiring
+            mode: tdd
+            testPathRegex: internal[/\\]deps[/\\].*_test\.go
+            commandRegex: go test.*(internal[/\\]deps|\./\.\.\.)
+            productionPathRegex: internal[/\\]deps[/\\](?!.*_test\.go).*\.go

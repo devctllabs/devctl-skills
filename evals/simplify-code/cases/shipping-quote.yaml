@@ -1,0 +1,61 @@
+- description: Simplify nested shipping logic behind a stable behavior oracle
+  vars:
+    request: |
+      Use $simplify-code from `.agents/skills/simplify-code` to simplify `shipping.py`. Preserve
+      the public `shipping_quote(region, weight, express)` signature and every rate documented in
+      README.md. Existing tests are coupled to a private helper; establish adequate public
+      characterization GREEN before changing production, then leave the suite focused on public
+      behavior. Change only the implementation and its owner test, and use the documented unittest
+      command.
+    fixtureDir: fixtures/shipping-quote
+    targetSkillName: simplify-code
+    targetSkillDir: ../../skills/simplify-code
+    toolExecutables: python3
+    qualityRubric: file://rubrics/simplification.md
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config: { skillName: simplify-code }
+    - type: javascript
+      value: file://harness/assert-python-case.mjs
+      config:
+        allowedPathRegex: ^(shipping\.py|tests/test_shipping\.py)$
+        requiredPathRegexes: [^shipping\.py$, ^tests/test_shipping\.py$]
+        fileContentRules:
+          - path: shipping.py
+            requiredRegexes:
+              - def\s+shipping_quote\(region:\s*str,\s*weight:\s*float,\s*express:\s*bool\)\s*->\s*int
+    - type: javascript
+      value: file://harness/assert-simplification.mjs
+      config:
+        sourcePath: shipping.py
+        testPath: tests/test_shipping.py
+        maxDecisionNodes: 2
+        maxNesting: 1
+    - type: javascript
+      value: file://harness/assert-command.mjs
+      config:
+        commands:
+          - argv: [python3, -m, unittest, discover, -s, tests, -v]
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        phases:
+          - label: public characterization
+            mode: characterization
+            testPathRegex: tests[/\\]test_shipping\.py
+            commandRegex: python3.*unittest
+            productionPathRegex: '(^|[/\\])shipping\.py$'
+    - type: agent-rubric
+      value: "{{qualityRubric}}"
+      threshold: 0.8
+      provider:
+        id: openai:codex-sdk
+        config:
+          working_dir: "{{workspaceDir}}"
+          sandbox_mode: read-only
+          approval_policy: never
+          network_access_enabled: false
+          web_search_mode: disabled
+          inherit_process_env: false
+          skip_git_repo_check: false

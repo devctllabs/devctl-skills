@@ -1,0 +1,98 @@
+- description: Implement catalog remove with scenario-sized outside-in TDD
+  metadata:
+    costTier: judged
+  vars:
+    request: |
+      Use $devctl-python from `.agents/skills/devctl-python` to implement only `catalog remove NAME`
+      outside-in: CLI, then service, then filesystem repository.
+
+      Expose `main(argv, deps)`, `CatalogService(store).remove(name) -> Path`, and
+      `FilesystemCatalog(root).remove(name) -> Path`. The CLI delegates through `deps.catalog`,
+      prints `removed <path>` on success, and maps `CatalogError` to `catalog: <message>` on
+      stderr with exit code 1. The service rejects blank, absolute, separator-containing, `.`,
+      and `..` names with `InvalidPackageNameError`. The repository removes one empty direct
+      child, returns its resolved former path, preserves siblings, and raises
+      `CatalogNotFoundError` when missing.
+
+      Add and run one scenario at a time: CLI success, CLI CatalogError mapping, service safe-name
+      delegation, service invalid-name validation, repository single removal, repository sibling
+      preservation, and repository missing mapping. A useful RED requires minimum production and
+      GREEN. If a later scenario is already GREEN because earlier minimum behavior naturally covers
+      it, make no production change and continue. Finish all checkpoints at one layer before
+      descending. CLI tests call `main`; the service declares a consumer-owned store Protocol and
+      its tests use a small double; repository tests use `TemporaryDirectory`. Run the narrow owner
+      suite after every test and production/refactor edit.
+
+      Use the documented unittest command.
+      Do not edit existing errors, README, or pyproject; add dependencies, operations, or layers;
+      or change production before the first useful CLI RED. Finish with the first RED, its GREEN,
+      and the final full-suite command.
+    fixtureDir: fixtures/catalog-remove-tdd
+    targetSkillName: devctl-python
+    targetSkillDir: ../../skills/devctl-python
+    dependencySkillDirs: ../../skills/outside-in-tdd,../../skills/simplify-code
+    toolExecutables: python3
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: devctl-python
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: outside-in-tdd
+        beforeFileChangeRegex: "(tests|src)[/\\\\]"
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: simplify-code
+        afterProductionPathRegex: "src[/\\\\]catalog[/\\\\]cli\\.py"
+        afterGreenCommandRegex: "python3.*unittest.*(tests[./\\\\]unit[./\\\\]cli|test_catalog_cli)"
+        beforeFollowingFileChangeRegex: "(tests|src)[/\\\\]"
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        caseName: catalog-remove-tdd
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        phases:
+          - label: CLI success
+            mode: tdd
+            testPathRegex: "tests[/\\\\]unit[/\\\\]cli"
+            commandRegex: "python3.*unittest.*(tests[./\\\\]unit[./\\\\]cli|test_catalog_cli)"
+            productionPathRegex: "src[/\\\\]catalog[/\\\\]cli\\.py"
+            forbiddenProductionPathRegex: "src[/\\\\]catalog[/\\\\](cli|service|repository)\\.py"
+          - label: CLI CatalogError mapping
+            mode: tdd-or-green
+            testPathRegex: "tests[/\\\\]unit[/\\\\]cli"
+            commandRegex: "python3.*unittest.*(tests[./\\\\]unit[./\\\\]cli|test_catalog_cli)"
+            productionPathRegex: "src[/\\\\]catalog[/\\\\]cli\\.py"
+            forbiddenProductionPathRegex: "src[/\\\\]catalog[/\\\\](cli|service|repository)\\.py"
+          - label: service safe-name delegation
+            mode: tdd
+            testPathRegex: "tests[/\\\\]unit[/\\\\]service"
+            commandRegex: "python3.*unittest.*(tests[./\\\\]unit[./\\\\]service|test_catalog_service)"
+            productionPathRegex: "src[/\\\\]catalog[/\\\\]service\\.py"
+            forbiddenProductionPathRegex: "src[/\\\\]catalog[/\\\\](service|repository)\\.py"
+          - label: service invalid-name validation
+            mode: tdd-or-green
+            testPathRegex: "tests[/\\\\]unit[/\\\\]service"
+            commandRegex: "python3.*unittest.*(tests[./\\\\]unit[./\\\\]service|test_catalog_service)"
+            productionPathRegex: "src[/\\\\]catalog[/\\\\]service\\.py"
+            forbiddenProductionPathRegex: "src[/\\\\]catalog[/\\\\](service|repository)\\.py"
+          - label: repository single removal
+            mode: tdd
+            testPathRegex: "tests[/\\\\]integration[/\\\\]repository"
+            commandRegex: "python3.*unittest.*(tests[./\\\\]integration[./\\\\]repository|test_filesystem_catalog)"
+            productionPathRegex: "src[/\\\\]catalog[/\\\\]repository\\.py"
+          - label: repository sibling preservation
+            mode: tdd-or-green
+            testPathRegex: "tests[/\\\\]integration[/\\\\]repository"
+            commandRegex: "python3.*unittest.*(tests[./\\\\]integration[./\\\\]repository|test_filesystem_catalog)"
+            productionPathRegex: "src[/\\\\]catalog[/\\\\]repository\\.py"
+          - label: repository missing mapping
+            mode: tdd-or-green
+            testPathRegex: "tests[/\\\\]integration[/\\\\]repository"
+            commandRegex: "python3.*unittest.*(tests[./\\\\]integration[./\\\\]repository|test_filesystem_catalog)"
+            productionPathRegex: "src[/\\\\]catalog[/\\\\]repository\\.py"

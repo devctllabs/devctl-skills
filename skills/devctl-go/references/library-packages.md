@@ -9,6 +9,7 @@
 - API and Interfaces
 - Composition
 - State and Runtime
+- Testing
 - Review Checklist
 - Related References
 
@@ -77,6 +78,7 @@ Constructors that receive behavioral dependencies accept interfaces:
 
 ```go
 type HTTPDoer interface {
+    // Do sends req and returns the protocol response.
     Do(req *http.Request) (*http.Response, error)
 }
 
@@ -103,10 +105,12 @@ Keep interfaces small and name them by behavior:
 
 ```go
 type Clock interface {
+    // Now returns the current time according to this clock.
     Now() time.Time
 }
 
 type Encoder interface {
+    // Encode serializes v into the library's encoded representation.
     Encode(v any) ([]byte, error)
 }
 ```
@@ -156,6 +160,13 @@ Do not use `init()` in reusable libraries. Initialization must be explicit throu
 Import side effects must be minimal. Library import must not read environment variables, open network connections, start goroutines, register global handlers, install signal handlers, mutate global logging, or register process-wide defaults.
 
 Operations that may block or perform I/O accept `context.Context`. Background work has an explicit lifecycle such as `Run(ctx)`, `Start/Close`, `Open/Close`, or an equivalent contract.
+
+## Testing
+
+Test exported behavior from the consumer-facing package boundary. Add compile/import coverage for
+supported construction, use generated gomock mocks for caller-supplied interface dependencies, and
+test owned resource lifecycle explicitly. Keep pure library functions free of application-layer
+test scaffolding. Follow `testing-strategy.md`.
 
 ## Review Checklist
 

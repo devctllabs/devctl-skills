@@ -1,4 +1,4 @@
 interface:
   display_name: "Devctl Rust"
   short_description: "Rust libraries, workspaces, runtime"
-  default_prompt: "Use $devctl-rust to preserve this repository's conventions while applying consumer-owned traits, explicit I/O adapters, scenario-sized RED/GREEN cycles, and Rust-native quality checks."
+  default_prompt: "Use $devctl-rust to preserve Rust conventions and boundaries, composing $outside-in-tdd for handwritten production behavior."

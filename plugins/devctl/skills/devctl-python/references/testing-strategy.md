@@ -1,11 +1,8 @@
-# Testing Strategy
+# Python Testing
 
 ## Contents
 
-- Principle
-- Mandatory Outside-In TDD
-- Scenario Order
-- Layer Matrix
+- Behavior Owners
 - Pytest Structure
 - Test Doubles and Mocking
 - Repository Integration Tests
@@ -16,70 +13,11 @@
 - Verification Commands
 - Review Checklist
 
-## Principle
+This reference contains only Python-specific test placement, doubles, integration boundaries, and
+commands. It neither invokes nor replaces the controlling TDD workflow; the active language skill
+must load `$outside-in-tdd` before behavior work begins.
 
-Use TDD for handwritten production behavior from the highest affected public boundary. Advance one
-caller-visible scenario per RED/GREEN/refactor cycle, then test demanded lower components at their
-own boundaries. Preserve repository conventions.
-
-## Mandatory Outside-In TDD
-
-Remain in this state machine:
-
-```text
-TEST -> useful RED -> minimum production -> GREEN -> simplify
-```
-
-1. Choose the highest affected caller-visible API and smallest coherent scenario. Combine
-   assertions only when they demand the same production change.
-2. Before RED, change only its owner test. Initial infrastructure or an importable skeleton must not
-   implement requested behavior.
-3. Run the narrowest owner check. RED proves missing or wrong behavior, never import, syntax,
-   configuration, collection, fixture, or unrelated failure. If GREEN, strengthen or stop.
-4. Add minimum production for GREEN, then simplify and re-GREEN after each edit. Do not manufacture
-   a refactor change.
-5. Repeat. Before descending, run the component suite and verify its public contract and dependency
-   direction.
-
-An upper RED may demand a consumer-owned Protocol and double, never a concrete lower adapter. Put
-shared demanded contracts inward. Start bugs with their regression; characterize preserved public
-behavior before pure refactors; use drift checks instead of editing generated output.
-
-Plans name each scenario's owner test, expected useful RED, minimum GREEN change, and simplification
-checkpoint. Final evidence identifies the first RED and GREEN plus the final repository checks.
-
-## Scenario Order
-
-For a new capability, consider applicable scenarios in this order:
-
-```text
-Zero -> One -> Many -> Boundary -> Exceptions -> Interfaces
-```
-
-Existing tests count. Skip meaningless categories; explain only non-obvious or risky omissions.
-Bugfixes start with their regression and add only relevant adjacent coverage.
-
-Assign overlapping scenarios to the earliest category without duplication. Removing from an empty
-catalog is `Zero`; `Exceptions` covers distinct error behavior.
-
-- `Zero`: no records, empty collections or strings, `None`, omitted optional input, or empty command fields.
-- `One`: the smallest meaningful successful case.
-- `Many`: multiple records, repeated calls, batches, aggregation, iteration, or observable ordering.
-- `Boundary`: min/max values, threshold equality, just below/above limits, deadlines, path containment, or size limits.
-- `Exceptions`: validation failures, dependency errors, cancellation/deadlines, not found, conflict, permission denied, rollback, or error mapping.
-- `Interfaces`: optional final public-interface coverage for supported import paths, construction,
-  signatures, Protocol shape, CLI invocation, or transport registration when earlier scenarios did
-  not already exercise it.
-
-Categories guide behavior selection, not test names or counts. Prefer direct tests, clear
-assertions, and minimal fixtures. Coverage is direct only when assertions at the owning public
-boundary prove the result, error, side effect, or significant collaborator interaction.
-
-A cross-layer integration test has one declared owner. It may provide end-to-end confidence, but it
-does not also count as the direct service/usecase suite and the direct adapter suite. Use Protocol
-doubles for application policy and the real boundary facility for adapter mechanics.
-
-## Layer Matrix
+## Behavior Owners
 
 Every layer that exists and owns behavior needs a direct suite. Do not create an empty directory,
 dummy test, Protocol, or implementation merely to fill the matrix.
@@ -222,9 +160,7 @@ Help tests should expect `SystemExit(0)` and assert representative descriptions,
 metavars, and examples. Avoid full help snapshots unless byte-for-byte output is an explicit
 compatibility contract.
 
-Before replacing an existing string-branch dispatcher, establish a green characterization case for
-every leaf and keep those cases green throughout the refactor. This is a pure-refactor workflow, so
-do not manufacture RED.
+Keep every executable leaf under caller-visible coverage when replacing a string-branch dispatcher.
 
 ## Contract and Generated Code Checks
 
@@ -258,11 +194,6 @@ is insufficient. Preserve an existing type checker unless standardization is req
 
 ## Review Checklist
 
-- Did each scenario start at its owner boundary and advance through useful RED, minimum GREEN,
-  simplification, and re-GREEN after any refactor edit?
-- Did new capabilities consider the ordered scenario categories, while bugfixes began with their
-  regression and avoided ceremonial `N/A` coverage?
-- Did each upper-layer RED demand its Protocol before adapter implementation?
 - Does every behavior owner have the right direct suite and boundary-appropriate doubles or real
   temporary backend?
 - Do cross-layer tests have one explicit owner rather than being counted as several direct suites?

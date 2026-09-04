@@ -1,0 +1,23 @@
+- description: Plan API and optional health runtime lifecycle
+  vars:
+    caseId: lifecycle-health-runtime
+    request: |
+      Inspect this Go service scaffold and return a concise runtime and dependency-wiring plan.
+      Do not modify files.
+
+      The API command must run the main HTTP server and, when application config enables it, a
+      separate standard health server. Both are long-lived resources owned by one DI container.
+      Explain signal ownership, task construction, common graceful shutdown, optional health
+      resolution, and when required one-shot initialization runs. Minimize application boilerplate
+      and do not propose Devctl CLI, manifest, preset, or generator changes.
+    fixtureDir: fixtures/new-application-layout
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+  assert:
+    - type: skill-used
+      value: devctl-go
+    - type: javascript
+      value: file://harness/assert-workspace.mjs
+      config:
+        unchangedPaths:
+          - .

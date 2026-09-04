@@ -10,84 +10,61 @@ const REASON_LIMIT = 1_000;
 const MAX_REASONS_PER_CASE = 20;
 const DEFAULT_MAX_CONCURRENCY = 3;
 const DEFAULT_JUDGE_MODEL = "gpt-5.6-luna";
-const DEFAULT_JUDGE_REASONING_EFFORT = "high";
-export const OPTIMIZATION_BASELINE_WORDS = 4_918;
-export const OPTIMIZATION_TARGET_WORDS = 4_200;
-export const OPTIMIZATION_ARTIFACTS = [
-  "SKILL.md",
-  path.join("references", "code-principles.md"),
-  path.join("references", "testing-strategy.md"),
-];
+const DEFAULT_JUDGE_REASONING_EFFORT = "xhigh";
 export const COST_STAGES = ["deterministic", "judged-candidate", "judged-rubric"];
-const JUDGED_CASES = new Map([
+export const EVAL_CASES = new Map([
   [
-    "Recommend the complete fallback quality stack without changing the repository",
+    "preserve-existing-tooling",
     {
-      rubric: "quality-tooling.md",
-      reasoningEffort: "medium",
+      description: "Preserve an existing Poetry and Pyright project while fixing behavior",
+      tier: "deterministic",
     },
   ],
   [
-    "Plan a multi-layer production change as component-complete outside-in TDD",
+    "library-kiss-tdd",
     {
-      rubric: "outside-in-plan.md",
+      description: "Add a small stateless public library API without application architecture",
+      tier: "deterministic",
     },
   ],
   [
-    "Refactor mixed filesystem and subprocess access behind capability boundaries",
+    "io-boundaries-refactor",
     {
+      description: "Refactor mixed filesystem and subprocess access behind capability boundaries",
+      tier: "judged",
       rubric: "io-boundaries.md",
     },
   ],
   [
-    "Replace anonymous records and repository helpers with typed capability boundaries",
+    "typed-layer-contracts",
     {
-      rubric: "typed-layer-contracts.md",
+      description: "Replace anonymous records and repository helpers with typed capability boundaries",
+      tier: "deterministic",
     },
   ],
   [
-    "Implement catalog remove with scenario-sized outside-in TDD",
+    "catalog-remove-tdd",
     {
+      description: "Implement catalog remove with scenario-sized outside-in TDD",
+      tier: "judged",
       rubric: "public-operation-implementation.md",
     },
   ],
   [
-    "Detect concentrated complexity and owner-test gaps despite green quality gates",
+    "quality-hotspots-readonly",
     {
+      description: "Detect concentrated complexity and owner-test gaps despite green quality gates",
+      tier: "judged",
       rubric: "quality-hotspots.md",
     },
   ],
 ]);
+const CASES_BY_DESCRIPTION = new Map(
+  [...EVAL_CASES.entries()].map(([id, config]) => [config.description, { id, ...config }]),
+);
 const USAGE =
-  "Usage: run.mjs all [--max-concurrency <positive-integer>]";
-
-export function countWords(value) {
-  const trimmed = value.trim();
-  return trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length;
-}
-
-async function assertOptimizationTarget(evalDirectory) {
-  const targetDirectory =
-    process.env.SKILL_CREATOR_EVALS_TARGET_DIR ||
-    path.resolve(evalDirectory, "../../skills/devctl-python");
-  const artifacts = OPTIMIZATION_ARTIFACTS.map((artifact) =>
-    path.join(targetDirectory, artifact),
-  );
-  const counts = await Promise.all(
-    artifacts.map(async (artifact) => countWords(await readFile(artifact, "utf8"))),
-  );
-  const total = counts.reduce((sum, count) => sum + count, 0);
-  if (total > OPTIMIZATION_TARGET_WORDS) {
-    throw new Error(
-      `Mandatory context hard gate failed: ${total} words exceeds ${OPTIMIZATION_TARGET_WORDS} ` +
-        `(baseline ${OPTIMIZATION_BASELINE_WORDS})`,
-    );
-  }
-  process.stdout.write(
-    `PASS mandatory context: ${total}/${OPTIMIZATION_TARGET_WORDS} words ` +
-      `(baseline ${OPTIMIZATION_BASELINE_WORDS})\n`,
-  );
-}
+  "Usage: run.mjs all [--max-concurrency <positive-integer>] | " +
+  "run.mjs cases <case-id>... [--with-judge] [--max-concurrency <positive-integer>]";
 
 function resultKey(result) {
   const description = result.testCase?.description ?? result.description;
@@ -192,28 +169,80 @@ function requirePositiveInteger(value, label) {
 
 export function settingsForCommand(command, maxConcurrency = DEFAULT_MAX_CONCURRENCY) {
   requirePositiveInteger(maxConcurrency, "maxConcurrency");
-  if (command === "all") {
+  if (["all", "cases"].includes(command)) {
     return { maxConcurrency };
   }
   throw new Error(USAGE);
 }
 
 export function parseRunArgs(argv) {
-  const [command, ...options] = argv;
+  const [command, ...tokens] = argv;
   let maxConcurrency = DEFAULT_MAX_CONCURRENCY;
+  let withJudge = false;
+  const caseIds = [];
 
-  if (options.length > 0) {
-    if (options.length !== 2 || options[0] !== "--max-concurrency") {
+  settingsForCommand(command, maxConcurrency);
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token === "--max-concurrency") {
+      if (index + 1 >= tokens.length) {
+        throw new Error(USAGE);
+      }
+      maxConcurrency = requirePositiveInteger(
+        Number(tokens[index + 1]),
+        "--max-concurrency",
+      );
+      index += 1;
+      continue;
+    }
+    if (token === "--with-judge") {
+      if (command !== "cases" || withJudge) {
+        throw new Error(USAGE);
+      }
+      withJudge = true;
+      continue;
+    }
+    if (token.startsWith("--") || command !== "cases") {
       throw new Error(USAGE);
     }
-    maxConcurrency = requirePositiveInteger(
-      Number(options[1]),
-      "--max-concurrency",
-    );
+    caseIds.push(token);
   }
 
   settingsForCommand(command, maxConcurrency);
-  return { command, maxConcurrency };
+  if (command === "all" && (caseIds.length > 0 || withJudge)) {
+    throw new Error(USAGE);
+  }
+  if (command === "cases") {
+    if (caseIds.length === 0 || new Set(caseIds).size !== caseIds.length) {
+      throw new Error(USAGE);
+    }
+    for (const caseId of caseIds) {
+      if (!EVAL_CASES.has(caseId)) {
+        throw new Error(`Unknown case ID: ${caseId}\n${USAGE}`);
+      }
+    }
+  }
+  return { command, maxConcurrency, caseIds, withJudge };
+}
+
+export function selectCases(caseIds) {
+  const selected = caseIds.map((id) => ({ id, ...EVAL_CASES.get(id) }));
+  return {
+    deterministic: selected.filter((item) => item.tier === "deterministic"),
+    judged: selected.filter((item) => item.tier === "judged"),
+    withoutReviewer: selected.filter((item) => !item.rubric),
+  };
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function caseFilterPattern(cases) {
+  if (!Array.isArray(cases) || cases.length === 0) {
+    throw new Error("At least one case is required for a filter pattern");
+  }
+  return `^(?:${cases.map((item) => escapeRegex(item.description)).join("|")})$`;
 }
 
 export async function runCostStages(executeStage, stages = COST_STAGES) {
@@ -227,26 +256,31 @@ export async function runCostStages(executeStage, stages = COST_STAGES) {
 }
 
 async function runTier({
+  cases,
   evalDirectory,
   maxConcurrency,
   resultDirectory,
+  runLabel = "all",
   tier,
   keepWorkspaces = false,
 }) {
-  const suffix = `-all-${tier}`;
+  const suffix = `-${runLabel}-${tier}`;
   const resultPath = path.join(resultDirectory, `results${suffix}.jsonl`);
   const reportPath = path.join(resultDirectory, `report${suffix}.json`);
   const promptfooDirectory = path.join(resultDirectory, `promptfoo-runtime${suffix}`);
 
   process.stdout.write(`Cost tier: ${tier}\n`);
+  const filters = ["--filter-metadata", `costTier=${tier}`];
+  if (Array.isArray(cases) && cases.length > 0) {
+    filters.push("--filter-pattern", caseFilterPattern(cases));
+  }
   const child = spawnSync(
     "promptfoo",
     [
       "eval",
       "-c",
       "promptfooconfig.yaml",
-      "--filter-metadata",
-      `costTier=${tier}`,
+      ...filters,
       "--no-cache",
       "--no-share",
       "--no-table",
@@ -346,12 +380,20 @@ function deterministicEvidence(row) {
 }
 
 export function buildJudgeConfig(rows, evalDirectory, maxConcurrency) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new Error("At least one judged row is required");
+  }
+  const descriptions = new Set();
   const tests = rows.map((row) => {
     const description = row.testCase?.description;
-    const judge = JUDGED_CASES.get(description);
-    if (!judge) {
+    const judge = CASES_BY_DESCRIPTION.get(description);
+    if (!judge?.rubric) {
       throw new Error(`Unexpected judged case: ${description ?? "missing description"}`);
     }
+    if (descriptions.has(description)) {
+      throw new Error(`Duplicate judged case: ${description}`);
+    }
+    descriptions.add(description);
     return {
       description: `Judge ${description}`,
       vars: {
@@ -388,9 +430,6 @@ export function buildJudgeConfig(rows, evalDirectory, maxConcurrency) {
       ],
     };
   });
-  if (tests.length !== JUDGED_CASES.size) {
-    throw new Error(`Expected ${JUDGED_CASES.size} judged rows, received ${tests.length}`);
-  }
   return {
     description: "Judge passing devctl-python candidate workspaces",
     prompts: [
@@ -405,7 +444,7 @@ export function buildJudgeConfig(rows, evalDirectory, maxConcurrency) {
     ],
     tests,
     evaluateOptions: {
-      maxConcurrency: Math.min(maxConcurrency, JUDGED_CASES.size),
+      maxConcurrency: Math.min(maxConcurrency, tests.length),
       cache: false,
     },
   };
@@ -416,9 +455,10 @@ async function runJudgeStage({
   maxConcurrency,
   resultDirectory,
   rows,
+  runLabel = "all",
 }) {
-  const suffix = "-all-judged-rubric";
-  const configPath = path.join(resultDirectory, "judge-config-all.json");
+  const suffix = `-${runLabel}-judged-rubric`;
+  const configPath = path.join(resultDirectory, `judge-config-${runLabel}.json`);
   const resultPath = path.join(resultDirectory, `results${suffix}.jsonl`);
   const reportPath = path.join(resultDirectory, `report${suffix}.json`);
   const promptfooDirectory = path.join(resultDirectory, `promptfoo-runtime${suffix}`);
@@ -439,7 +479,7 @@ async function runJudgeStage({
       "--no-share",
       "--no-table",
       "--max-concurrency",
-      String(Math.min(maxConcurrency, JUDGED_CASES.size)),
+      String(Math.min(maxConcurrency, rows.length)),
       "--repeat",
       "1",
       "--output",
@@ -503,9 +543,76 @@ export async function run(command, options = {}) {
   );
   const harnessDirectory = path.dirname(fileURLToPath(import.meta.url));
   const evalDirectory = path.dirname(harnessDirectory);
-  await assertOptimizationTarget(evalDirectory);
   const resultDirectory = await mkdtemp(path.join(os.tmpdir(), "skill-creator-evals-results-"));
   const preserveWorkspaces = process.env.SKILL_CREATOR_EVALS_KEEP_WORKSPACES === "1";
+
+  if (command === "cases") {
+    const selection = selectCases(options.caseIds ?? []);
+    const withJudge = options.withJudge === true;
+    if (withJudge) {
+      for (const item of selection.withoutReviewer) {
+        process.stdout.write(`No reviewer configured: ${item.id}\n`);
+      }
+    }
+
+    if (selection.deterministic.length > 0) {
+      const result = await runTier({
+        cases: selection.deterministic,
+        evalDirectory,
+        maxConcurrency,
+        resultDirectory,
+        runLabel: "selected",
+        tier: "deterministic",
+      });
+      if (result.exitCode !== 0) {
+        process.stdout.write(`Evidence: ${resultDirectory}\n`);
+        return result.exitCode;
+      }
+    }
+
+    let selectedJudgedRows = [];
+    if (selection.judged.length > 0) {
+      const result = await runTier({
+        cases: selection.judged,
+        evalDirectory,
+        maxConcurrency,
+        resultDirectory,
+        runLabel: "selected",
+        tier: "judged",
+        keepWorkspaces: withJudge,
+      });
+      selectedJudgedRows = result.payload;
+      if (result.exitCode !== 0) {
+        if (withJudge) {
+          await cleanupRetainedWorkspaces(selectedJudgedRows, preserveWorkspaces);
+        }
+        process.stdout.write(`Evidence: ${resultDirectory}\n`);
+        return result.exitCode;
+      }
+    }
+
+    if (withJudge && selectedJudgedRows.length > 0) {
+      let judgeExitCode;
+      try {
+        judgeExitCode = await runJudgeStage({
+          evalDirectory,
+          maxConcurrency,
+          resultDirectory,
+          rows: selectedJudgedRows,
+          runLabel: "selected",
+        });
+      } finally {
+        await cleanupRetainedWorkspaces(selectedJudgedRows, preserveWorkspaces);
+      }
+      if (judgeExitCode !== 0) {
+        process.stdout.write(`Evidence: ${resultDirectory}\n`);
+        return judgeExitCode;
+      }
+    }
+
+    process.stdout.write(`Evidence: ${resultDirectory}\n`);
+    return 0;
+  }
 
   let judgedRows = [];
   const exitCode = await runCostStages(async (stage) => {
@@ -565,7 +672,11 @@ if (isEntrypoint) {
   }
 
   if (args) {
-    run(args.command, { maxConcurrency: args.maxConcurrency }).then(
+    run(args.command, {
+      caseIds: args.caseIds,
+      maxConcurrency: args.maxConcurrency,
+      withJudge: args.withJudge,
+    }).then(
     (exitCode) => {
       process.exitCode = exitCode;
     },

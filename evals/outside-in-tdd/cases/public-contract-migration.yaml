@@ -1,0 +1,78 @@
+- description: Evolve a public value contract and migrate in-repo callers
+  vars:
+    request: |
+      Use $outside-in-tdd from `.agents/skills/outside-in-tdd` to change the public
+      `format_name(first, last)` contract to `format_name(parts: NameParts)`, where `NameParts` is
+      an immutable typed value containing `first` and `last`. Preserve all rendered output, migrate
+      every in-repo caller, and remove the old two-argument contract without a compatibility shim.
+      Work from the existing GREEN behavior and use the unittest commands documented in README.md.
+    fixtureDir: fixtures/public-contract-migration
+    targetSkillName: outside-in-tdd
+    targetSkillDir: ../../skills/outside-in-tdd
+    dependencySkillDirs: ../../skills/simplify-code
+    toolExecutables: python3
+    qualityRubric: file://rubrics/contract-migration.md
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: outside-in-tdd
+        beforeFileChangeRegex: '(^|[/\\])(formatter|cli|tests[/\\]test_(formatter|cli))\.py$'
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: simplify-code
+        afterProductionPathRegex: '(^|[/\\])(formatter|cli)\.py$'
+        afterGreenCommandRegex: python3.*unittest.*test_formatter
+        beforeFollowingFileChangeRegex: '(^|[/\\])(formatter|cli|tests[/\\]test_(formatter|cli))\.py$'
+    - type: javascript
+      value: file://harness/assert-python-case.mjs
+      config:
+        allowedPathRegex: ^(formatter\.py|cli\.py|tests/test_(formatter|cli)\.py)$
+        requiredPathRegexes: [^formatter\.py$, ^cli\.py$, ^tests/test_formatter\.py$]
+        fileContentRules:
+          - path: formatter.py
+            requiredRegexes:
+              - '@dataclass\(frozen=True'
+              - class\s+NameParts
+              - def\s+format_name\(parts:\s*NameParts\)
+            forbiddenRegexes:
+              - def\s+format_name\(first
+              - \*args
+          - path: cli.py
+            requiredRegexes:
+              - NameParts\(
+    - type: javascript
+      value: file://harness/assert-command.mjs
+      config:
+        commands:
+          - argv: [python3, -m, unittest, discover, -s, tests, -v]
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        phases:
+          - label: old contract baseline
+            mode: baseline
+            commandRegex: python3.*unittest
+            productionPathRegex: '(^|[/\\])(formatter|cli)\.py$'
+          - label: new format_name contract
+            mode: tdd
+            allowSkeletonBeforeRed: true
+            testPathRegex: tests[/\\]test_formatter\.py
+            commandRegex: python3.*unittest.*test_formatter
+            greenCommandRegex: python3.*unittest.*test_formatter
+            productionPathRegex: '(^|[/\\])(formatter|cli)\.py$'
+            forbiddenProductionPathRegex: '(^|[/\\])(formatter|cli)\.py$'
+    - type: agent-rubric
+      value: "{{qualityRubric}}"
+      threshold: 0.8
+      provider:
+        id: openai:codex-sdk
+        config:
+          working_dir: "{{workspaceDir}}"
+          sandbox_mode: read-only
+          approval_policy: never
+          network_access_enabled: false
+          web_search_mode: disabled
+          inherit_process_env: false
+          skip_git_repo_check: false

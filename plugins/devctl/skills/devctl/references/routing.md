@@ -12,7 +12,7 @@ Subskills should not duplicate Devctl default path tables. They read explicit `d
 
 Subskills should not invent project tooling install workflows. `$devctl` owns `.mise.toml` policy, generation preflight, and default task semantics; subskills may only consume the resulting tooling context while implementing handwritten code.
 
-Subskills should not invent DB/resource manifest shape. `$devctl` owns CLI/resource modeling, including singleton `enable` capabilities, named `add` resources, DB connections, DB backend variants, Redis instances, and S3 connections/buckets.
+Subskills should not invent DB/resource manifest shape. `$devctl` owns CLI/resource modeling, including singleton `enable` capabilities, named `add` resources, DB connections, DB backend variants and their migration targets, Redis connections, and S3 connections/buckets.
 
 Subskills should not validate, lint, or materialize `sources`. They may read explicit manifest values for implementation context, but manifest validation, default resolution, source materialization, contract lint, and generation return to `$devctl` and the `devctl` CLI.
 
@@ -45,6 +45,13 @@ Route React + Vite implementation to `$devctl-react-vite` when the task changes:
 - generated OpenAPI client usage;
 - forms, i18n, Storybook, testing, UI states.
 
+Route Obsidian plugin implementation with React to `$devctl-obsidian-react` when the task changes:
+
+- Obsidian plugin structure, lifecycle, commands, views, settings, events, or vault access;
+- React surfaces mounted inside Obsidian;
+- mobile compatibility, plugin data safety, startup performance, or community guidelines;
+- esbuild packaging, Storybook, unit tests, real-Obsidian E2E, or plugin releases.
+
 ## Future Skills
 
 If the manifest language is `python` and no `$devctl-python` skill exists, complete manifest and CLI work only. Do not invent Python project architecture.
@@ -65,6 +72,12 @@ For a frontend app consuming a generated API:
 1. Use `$devctl` to capture source/client generation context when Devctl-managed.
 2. Use `$devctl-openapi` if contract changes are required.
 3. Use `$devctl-react-vite` for frontend app structure and generated client integration.
+
+For an Obsidian plugin with React surfaces:
+
+1. Use `$devctl` only when the repository also has Devctl-managed manifest or generation work.
+2. Use `$devctl-obsidian-react` for the plugin runtime, React surfaces, tests, and release workflow.
+3. Use `$devctl-react-vite` only for a separate browser application package; do not apply SPA routing or runtime defaults to the Obsidian plugin bundle.
 
 ## Stop Conditions
 

@@ -9,6 +9,7 @@
 - Policy Dependencies
 - Repository Scoping
 - Examples
+- Testing
 - Review Checklist
 
 ## Boundary
@@ -94,6 +95,7 @@ Declare policy interfaces at the consumer side:
 
 ```go
 type OrderPolicy interface {
+    // CanApprove reports whether actor may approve order.
     CanApprove(ctx context.Context, actor common.Actor, order domorder.OrderView) error
 }
 ```
@@ -119,7 +121,7 @@ Database row-level security can be defense in depth, but it does not replace ser
 Preferred service call:
 
 ```go
-func (s *service) Approve(ctx context.Context, actor common.Actor, cmd domorder.ApproveOrderCommand) error {
+func (s *Service) Approve(ctx context.Context, actor common.Actor, cmd domorder.ApproveOrderCommand) error {
     ord, err := s.repo.GetByTenant(ctx, actor.TenantID, cmd.OrderID)
     if err != nil {
         return err
@@ -138,6 +140,13 @@ actor := auth.ActorFromContext(ctx)
 ```
 
 `context.Context` can carry request metadata, but business-significant actor and tenant data should be explicit service/usecase input.
+
+## Testing
+
+Test credential/actor extraction at transport, authorization and policy dependencies at
+service/usecase, and tenant/resource scoping at repository integration boundaries. Cover missing
+actors, cross-tenant denial, policy failures, and safe error mapping without repeating one scenario
+through every layer. Follow `testing-strategy.md` and the affected layer reference.
 
 ## Review Checklist
 

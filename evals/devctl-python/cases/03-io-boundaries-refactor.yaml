@@ -1,0 +1,31 @@
+- description: Refactor mixed filesystem and subprocess access behind capability boundaries
+  metadata:
+    costTier: judged
+  vars:
+    request: |
+      Use $devctl-python from `.agents/skills/devctl-python` to finish migrating package discovery
+      away from the legacy direct I/O in `PackageService` without changing returned package names.
+
+      Reuse the existing Codex client, filesystem catalog, model, and their owner tests unchanged.
+      Make `PackageService` consume the two integrations through explicit constructor dependencies
+      and narrow consumer-owned capabilities. Its public shape after the refactor must be
+      `PackageService(plugin_client, package_catalog).discover()`, with no runtime filesystem or
+      executable arguments.
+
+      Keep enabled/local intersection and ordering policy in the service. Do not import concrete
+      adapters there, mirror raw filesystem or subprocess APIs in a Protocol, or add a facade, DI
+      framework, generic platform layer, registry, or base adapter. Change only the service and its
+      owner unit test, and use the documented unittest command.
+    fixtureDir: fixtures/io-boundaries-refactor
+    targetSkillName: devctl-python
+    targetSkillDir: ../../skills/devctl-python
+    toolExecutables: python3
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: devctl-python
+    - type: javascript
+      value: file://harness/assert-case.mjs
+      config:
+        caseName: io-boundaries-refactor
