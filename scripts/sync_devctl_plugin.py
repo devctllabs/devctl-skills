@@ -13,6 +13,7 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = REPOSITORY_ROOT / "skills"
 TARGET_ROOT = REPOSITORY_ROOT / "plugins" / "devctl" / "skills"
+SHARED_SKILL_NAMES = frozenset({"outside-in-tdd", "simplify-code"})
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,7 +32,11 @@ def is_devctl_skill(path: Path) -> bool:
     name = path.name
     return (
         path.is_dir()
-        and (name == "devctl" or name.startswith("devctl-"))
+        and (
+            name == "devctl"
+            or name.startswith("devctl-")
+            or name in SHARED_SKILL_NAMES
+        )
         and (path / "SKILL.md").is_file()
     )
 

@@ -14,7 +14,9 @@
 
 ## Principle
 
-Use KISS and SOLID as practical guardrails for handwritten Rust code. Keep code explicit, type-safe, and easy to change without weakening the crate, module, delivery, and generated-code boundaries in this skill.
+Use KISS, DRY, and SOLID as practical guardrails for handwritten Rust code. Keep code explicit,
+type-safe, and easy to change without weakening the crate, module, delivery, and generated-code
+boundaries in this skill.
 
 Simple does not mean untyped or unlayered. Prefer the smallest type/module/crate shape that protects the real invariant and current ownership boundary.
 
@@ -121,6 +123,7 @@ hide new complexity or boundary violations.
 - Is the new abstraction solving a current problem rather than preparing for a vague future?
 - Could a plain function, concrete type, or local module express this more clearly?
 - Is each repeated rule, normalization, error mapping, schema fact, or default owned in one place?
+- Does each shared abstraction represent actual stable repetition with a clear owner?
 - Is a new crate justified by API, dependency, feature, reuse, compile, versioning, or ownership boundaries?
 - Are traits small, consumer-owned, and behavior-focused?
 - Do trait methods describe application capabilities instead of mirroring a library API?
@@ -134,6 +137,7 @@ hide new complexity or boundary violations.
 - Do comments explain guarantees and decisions rather than narrating implementation?
 - Is every suppression narrow and locally justified?
 - Are shared helpers placed by ownership instead of dumped into `common`, `utils`, or `platform`?
+- Are alternative implementations selected in delivery or `deps` instead of branching through core?
 
 ## Related References
 

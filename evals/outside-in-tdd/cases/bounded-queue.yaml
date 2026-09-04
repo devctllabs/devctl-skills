@@ -1,0 +1,76 @@
+- description: Grow a bounded queue with outside-in TDD and ZOMBIES
+  vars:
+    request: |
+      Use $outside-in-tdd from `.agents/skills/outside-in-tdd` to implement the bounded queue
+      specified in README.md. Preserve the documented unittest command and make only the smallest
+      production and test changes needed. Report the first useful RED, its GREEN, the simplification
+      result, and the final command you actually ran.
+    fixtureDir: fixtures/bounded-queue
+    targetSkillName: outside-in-tdd
+    targetSkillDir: ../../skills/outside-in-tdd
+    dependencySkillDirs: ../../skills/simplify-code
+    toolExecutables: python3
+    qualityRubric: file://rubrics/zombies.md
+  assert:
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: outside-in-tdd
+        beforeFileChangeRegex: '(^|[/\\])(bounded_queue\.py|tests[/\\]test_bounded_queue\.py)$'
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: simplify-code
+        afterProductionPathRegex: '(^|[/\\])bounded_queue\.py$'
+        afterGreenCommandRegex: python3.*unittest
+        beforeFollowingFileChangeRegex: '(^|[/\\])(bounded_queue\.py|tests[/\\]test_bounded_queue\.py)$'
+    - type: javascript
+      value: file://harness/assert-python-case.mjs
+      config:
+        allowedPathRegex: ^(bounded_queue\.py|tests/test_bounded_queue\.py)$
+        requiredPathRegexes: [^bounded_queue\.py$, ^tests/test_bounded_queue\.py$]
+        fileContentRules:
+          - path: bounded_queue.py
+            requiredRegexes:
+              - class\s+BoundedQueue
+              - def\s+push\(
+              - def\s+pop\(
+    - type: javascript
+      value: file://harness/assert-command.mjs
+      config:
+        commands:
+          - argv: [python3, -m, unittest, discover, -s, tests, -v]
+    - type: javascript
+      value: file://harness/assert-trajectory.mjs
+      config:
+        forbiddenRedOutputRegex: ModuleNotFoundError|ImportError|SyntaxError|No module named
+        phases:
+          - label: empty queue
+            mode: tdd
+            allowSkeletonBeforeRed: true
+            testPathRegex: tests[/\\]test_bounded_queue\.py
+            commandRegex: python3.*unittest
+            productionPathRegex: '(^|[/\\])bounded_queue\.py$'
+          - label: one and many FIFO
+            mode: tdd-or-green
+            testPathRegex: tests[/\\]test_bounded_queue\.py
+            commandRegex: python3.*unittest
+            productionPathRegex: '(^|[/\\])bounded_queue\.py$'
+          - label: capacity and exceptional behavior
+            mode: tdd-or-green
+            testPathRegex: tests[/\\]test_bounded_queue\.py
+            commandRegex: python3.*unittest
+            productionPathRegex: '(^|[/\\])bounded_queue\.py$'
+    - type: agent-rubric
+      value: "{{qualityRubric}}"
+      threshold: 0.8
+      provider:
+        id: openai:codex-sdk
+        config:
+          working_dir: "{{workspaceDir}}"
+          sandbox_mode: read-only
+          approval_policy: never
+          network_access_enabled: false
+          web_search_mode: disabled
+          inherit_process_env: false
+          skip_git_repo_check: false

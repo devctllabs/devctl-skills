@@ -233,7 +233,7 @@ Service tests should assert business behavior and use the test-double strategy f
 - use the repo's existing convention first;
 - for new projects, use `mockall` for trait dependencies;
 - use handwritten fakes/spies only when they are clearer than mock expectations or need stateful behavior;
-- choose scenarios with the ZOMBIES checklist before writing dependency expectations.
+- use the active owner scenario before writing dependency expectations.
 
 Read `io-boundaries-and-platform.md` when a service calls files, external commands, SDKs, clocks,
 random sources, environment, or business-significant telemetry directly.

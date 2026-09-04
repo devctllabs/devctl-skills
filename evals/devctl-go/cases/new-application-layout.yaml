@@ -1,0 +1,23 @@
+- description: Choose the normative package layout for a new Go service
+  vars:
+    caseId: new-application-layout
+    request: |
+      Inspect this new Go service scaffold and return a concise package and dependency-wiring plan.
+      Do not modify files.
+
+      The application must expose HTTP operations that start and inspect task runs, persist run
+      state in SQLite, and execute Codex as a subprocess. The scaffold has no established package
+      conventions yet. Name the packages that own domain contracts, application behavior, SQLite
+      persistence, the Codex integration, HTTP delivery, and runtime construction. Include only
+      additional layers that have a current responsibility.
+    fixtureDir: fixtures/new-application-layout
+    targetSkillName: devctl-go
+    targetSkillDir: ../../skills/devctl-go
+  assert:
+    - type: skill-used
+      value: devctl-go
+    - type: javascript
+      value: file://harness/assert-workspace.mjs
+      config:
+        unchangedPaths:
+          - .

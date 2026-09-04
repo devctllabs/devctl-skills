@@ -9,6 +9,7 @@
 - Domain Errors
 - Import Rules and Anti-Patterns
 - `internal/domain/common`
+- Testing
 
 ## Role
 
@@ -49,7 +50,8 @@ internal/domain/
 
 Use `domain/common` for types reused by multiple independent domain packages:
 
-- base domain error categories: `ErrNotFound`, `ErrConflict`, `ErrUnavailable`, `ErrInvalid`, `ErrForbidden`, `ErrInternal`, `ErrInvalidState`;
+- base domain error categories: `ErrNotFound`, `ErrConflict`, `ErrUnavailable`, `ErrInvalid`,
+  `ErrForbidden`, `ErrInternal`, `ErrCanceled`, `ErrDeadlineExceeded`, `ErrInvalidState`;
 - shared value objects such as money, time ranges, normalized IDs, localized strings;
 - shared pagination, sorting, range, and set-filter types.
 
@@ -172,17 +174,24 @@ Examples:
 
 ```go
 var (
-    ErrNotFound     = errors.New("not found")
-    ErrConflict     = errors.New("conflict")
-    ErrInvalid      = errors.New("invalid")
-    ErrForbidden    = errors.New("forbidden")
-    ErrUnavailable  = errors.New("unavailable")
-    ErrInternal     = errors.New("internal")
-    ErrInvalidState = errors.New("invalid state")
+    ErrNotFound         = errors.New("not found")
+    ErrConflict         = errors.New("conflict")
+    ErrInvalid          = errors.New("invalid")
+    ErrForbidden        = errors.New("forbidden")
+    ErrUnavailable      = errors.New("unavailable")
+    ErrInternal         = errors.New("internal")
+    ErrCanceled         = errors.New("canceled")
+    ErrDeadlineExceeded = errors.New("deadline exceeded")
+    ErrInvalidState     = errors.New("invalid state")
 )
 ```
 
-Repositories and clients translate low-level errors into these categories. Services decide what to do based on categories and may wrap errors with context while preserving `errors.Is` / `errors.As` behavior. Transport maps domain categories to protocol responses.
+Repositories classify low-level errors into these categories while preserving the raw cause for
+internal diagnostics, for example `fmt.Errorf("%w: %w", ErrConflict, err)`. Map
+`context.Canceled` and `context.DeadlineExceeded` to their matching domain categories while keeping
+the context sentinel as the second cause. Services decide from domain/context categories and add
+dependency-call context with `%w`; they must not branch on retained driver types. Transport maps
+categories to safe protocol responses and never serializes the internal error chain.
 
 Start with central categories. Add entity-specific errors only when a common category loses important business meaning.
 
@@ -374,3 +383,10 @@ type PostFilter struct {
 ```
 
 Use `Sort[string]` as a generic default only when typed enum fields add no value. An empty `Sort[T]{}` means no explicit sort.
+
+## Testing
+
+Keep domain tests beside the owning package. Test value-object normalization, invariants, state
+transitions, typed error facts, and `errors.Is`/`errors.As` behavior without dependency doubles.
+Exercise zero values and meaningful boundaries for shared pagination, sorting, range, and filter
+types. Apply the active owner scenario and the Go assertion policy from `testing-strategy.md`.

@@ -23,7 +23,9 @@ Use this reference when placing, creating, or reviewing deployment-facing files 
 - image entrypoints, command args, probes, resources, values, config, and secrets;
 - deployment layout choices that need to align with `cmd/<app_name>`, `internal/deps`, `api/`, `ui/`, and `devctl.yaml`.
 
-Keep this reference focused on packaging and deployment shape. Use `runtime-and-wiring.md` for in-process lifecycle and DI, `observability-and-health.md` for health endpoint behavior, and `monorepo-and-ui.md` for Go plus UI monorepo layout.
+Keep this reference focused on packaging and deployment shape. Use `cmd.md`,
+`dependency-wiring.md`, and `lifecycle-and-concurrency.md` for in-process runtime behavior; use
+`observability-and-health.md` for health endpoints and `monorepo-and-ui.md` for Go plus UI layout.
 
 ## Default Layout
 
@@ -266,7 +268,8 @@ When generated deployment scaffolding appears in a repo, preserve the generated 
 
 ## Related References
 
-- Read `runtime-and-wiring.md` for `cmd/<app_name>` subcommands, DI, lifecycle, shutdown, and runtime args.
+- Read `cmd.md`, `dependency-wiring.md`, and `lifecycle-and-concurrency.md` for subcommands, DI,
+  shutdown, and runtime args.
 - Read `devctl-yaml-integration.md` for manifest-driven components, config, generated boundaries, and runtime activation.
 - Read `observability-and-health.md` for readiness, liveness, metrics, debug, and profiling behavior.
 - Read `monorepo-and-ui.md` for Go plus UI monorepo layout, `api/` contract ownership, `ui/` package boundaries, and root build-context decisions.

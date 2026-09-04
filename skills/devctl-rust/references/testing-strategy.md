@@ -1,11 +1,8 @@
-# Testing Strategy
+# Rust Testing
 
 ## Contents
 
-- Principle
-- Mandatory Outside-In TDD
-- Scenario Order
-- Layer Matrix
+- Behavior Owners
 - Unit Tests
 - Test Doubles and Mocking
 - Repository Integration Tests
@@ -18,74 +15,11 @@
 - Tauri CI Notes
 - Review Checklist
 
-## Principle
+This reference contains only Rust-specific test placement, doubles, integration boundaries, and
+commands. It neither invokes nor replaces the controlling TDD workflow; the active language skill
+must load `$outside-in-tdd` before behavior work begins.
 
-Use outside-in TDD for handwritten production behavior from the highest affected public boundary.
-Advance one caller-visible scenario per RED/GREEN/simplify cycle, then test demanded lower
-components at their own module or crate boundaries. Preserve repository commands and test
-conventions.
-
-## Mandatory Outside-In TDD
-
-Remain in this state machine:
-
-```text
-TEST -> useful RED -> minimum production -> GREEN -> simplify
-```
-
-1. Choose the highest affected caller-visible API and smallest coherent scenario. Combine
-   assertions only when they demand the same production change.
-   When the request changes a CLI, HTTP/RPC endpoint, Tauri command, or consumer contract, that
-   delivery surface is the highest boundary; start at a service API only when no delivery contract
-   changes.
-2. Change only the owner test before useful RED. For a new compiled API, first add the smallest
-   declaration or skeleton required for the crate to compile, without requested behavior.
-3. Run the narrowest owner module/test. RED proves missing or wrong behavior, not unrelated
-   compilation, configuration, fixture, or setup failure. `todo!`, `unimplemented!`, or an explicit
-   unsupported error may make RED useful but never counts as GREEN.
-4. Add minimum production for GREEN, simplify if useful, and rerun the same narrow check after every
-   edit. Do not manufacture a refactor.
-5. Finish applicable scenarios at the current public boundary before descending. Run its module or
-   package suite and verify the named contract and dependency direction at each checkpoint.
-
-For a new delivery operation, the compile skeleton may include clap/route/command registration, a
-narrow injected core capability, and a handler that returns an explicit unsupported error. The
-first useful RED must exercise the public delivery boundary. Do not implement service or repository
-behavior merely to make that RED possible; use a narrow double until delivery scenarios are GREEN.
-
-An upper RED may demand a consumer-owned trait and test double, never a concrete lower adapter.
-Begin bugs with the regression. Characterize preserved behavior before pure refactors. Use drift
-checks instead of editing generated output.
-
-Plans name each scenario's owner test, expected useful RED, minimum GREEN change, and simplification
-checkpoint. Final evidence identifies the first useful RED and GREEN plus final repository checks.
-
-## Scenario Order
-
-For a new capability, consider applicable scenarios in this order:
-
-```text
-Zero -> One -> Many -> Boundary -> Exceptions -> Interfaces
-```
-
-Existing tests count. Skip meaningless categories; explain only non-obvious or risky omissions.
-Bugfixes start with their regression and add only relevant adjacent coverage.
-
-- `Zero`: no records, empty collections or strings, `None`, zero-value typed config, or omitted input.
-- `One`: the smallest meaningful successful case.
-- `Many`: multiple records, repeated calls, batches, aggregation, iteration, or observable ordering.
-- `Boundary`: min/max values, threshold equality, just below/above limits, path containment,
-  deadlines, or size limits.
-- `Exceptions`: validation failures, dependency errors, cancellation/deadlines, not found, conflict,
-  permission denied, partial failure, rollback, or error mapping.
-- `Interfaces`: optional public construction, signature, trait shape, CLI invocation, route
-  registration, or supported re-export coverage not exercised earlier.
-
-Categories guide behavior selection, not test names or counts. A cross-layer integration test has
-one declared owner. It adds confidence but does not count as direct service, adapter, and delivery
-coverage simultaneously.
-
-## Layer Matrix
+## Behavior Owners
 
 Every module/crate that exists and owns changed behavior needs a direct suite. Do not create empty
 modules, traits, mocks, or tests merely to fill the matrix.
@@ -246,11 +180,16 @@ CLI tests focus on public behavior:
 - delegation to the selected core service/usecase capability with meaningful values;
 - stdout/stderr and exit status;
 - application-error presentation;
+- root, group, and leaf help without dependency construction or handler execution;
 - command registration when the tree is custom.
 
 Exercise the public `clap` parse-and-dispatch boundary or the repository's established command
-helper. Private handler tests are supplementary. Before replacing an existing dispatcher, establish
-GREEN characterization for every executable leaf and keep it green throughout the refactor.
+helper. Private handler tests are supplementary. Keep every executable leaf under caller-visible
+coverage when replacing an existing dispatcher.
+
+Help tests should assert successful parsing or process exit and representative command
+descriptions, argument help, value names, and local examples. Avoid full help snapshots unless
+byte-for-byte output is an explicit compatibility contract.
 
 ## Contract and Generated Code Checks
 
@@ -316,10 +255,6 @@ Failures mentioning missing `pango`, `gdk`, `webkit`, appindicator, xdo, SSL, SV
 
 ## Review Checklist
 
-- Did each scenario advance through useful RED, minimum GREEN, optional simplification, and
-  re-GREEN at its owner boundary?
-- Did bugs begin with regression and pure refactors with characterization?
-- Did upper-layer RED demand a trait before a concrete adapter?
 - Does every changed behavior owner have a direct module/crate suite?
 - Does each cross-layer test have one owner instead of being counted several times?
 - Do atomicity/rollback claims include partial-application failure and recovery?

@@ -38,6 +38,11 @@ introduce `staticcheck` or a pinned aggregate linter only when standardization i
 enabled checks do not duplicate existing gates. Do not add a linter solely to reproduce another
 language's stack.
 
+When `golangci-lint` with `revive` is the established or selected baseline, cap handwritten
+functions and methods at four input parameters and three result values with `argument-limit` and
+`function-result-limit`. Treat violations as a prompt for a cohesive request, result, dependency,
+or execution-state type; do not add a suppression merely to meet the numeric gate.
+
 ## Documentation and Suppressions
 
 Document exported library APIs and internal callables whose guarantees are not evident from names

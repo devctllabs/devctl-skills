@@ -42,7 +42,7 @@ When `devctl.yaml` exists, inspect only the fields relevant to the task:
 - `components.grpc.server` and `components.grpc.clients` for gRPC server/client shape.
 - `components.kafka.consumers` and `components.kafka.producers` for Kafka runtime and outbound messaging.
 - `components.db.connections[].name`, `.default`, `.kind_env`, and `.variants[]` for logical DB resources and backend selection.
-- `components.redis.instances[]` for named Redis resources.
+- `components.redis.connections[]` for named Redis resources.
 - `components.s3.connections[]` and `components.s3.buckets[]` for S3-compatible object storage resources.
 - `components.*.env`, `env.prefix`, and `env.custom` for generated config fields.
 - `start` blocks for runtime activation toggles.
@@ -63,7 +63,8 @@ Use manifest components to explain or verify expected Go structure:
 | `components.kafka.consumers` | consumer packages, named DI registration, `consumer <name>` runtime entrypoint |
 | `components.kafka.producers` | outbound producer adapters in `internal/client` or the existing project convention |
 | `components.db.connections` | logical DB providers keyed by connection name; provider selects a backend variant from generated config |
-| `components.redis.instances` | named Redis clients or caches wired by instance name |
+| `components.redis.connections` | named Redis clients or caches wired by connection name |
+| `components.db.connections[].variants[].migrations` | project-relative golang-migrate files and task-only database URL env; not application runtime config |
 | `components.s3.connections` and `components.s3.buckets` | named S3-compatible clients plus logical bucket resources wired by bucket name |
 | `components.*.env` and `env.custom` | generated config plus validation and registration in `internal/deps/config.go` |
 | `start` | conditional runtime startup for servers, consumers, metrics, workers, or similar components |
@@ -118,6 +119,12 @@ Keep handwritten code outside generated output:
 - client wrappers normalize external errors before they reach service contracts;
 - manual extensions live under `internal/`, usually `internal/transport`, `internal/client`, or `internal/deps`.
 
+For a Go HTTP server generated with `oapi-codegen`, `oapi_config` owns flags such as `models`,
+`echo5-server`, `strict-server`, and `embedded-spec`; `server_out` owns the output directory. Do not
+declare the output path again in the native generator config. Prefer one checked-in generated file
+at `<server_out>/server.gen.go`. Runtime request validation should load the embedded document from
+that generated package, while handwritten strict handlers and DI wiring stay under `internal/`.
+
 ## Manual Extensions and Updates
 
 Put manual code outside generated directories:
@@ -136,6 +143,12 @@ When changing contract inputs:
 - inspect generated diff for expected shape only;
 - update transport/client mappers and tests;
 - run existing drift or generated-code checks when present.
+
+When the Devctl CLI is not installed but the repository already has a pinned `oapi-codegen` tool,
+native config, and a project-local generation task, that task may refresh the checked-in HTTP server
+output. This is a local generation fallback, not Devctl manifest validation or source
+materialization. Report that `devctl validate` and `devctl gen` did not run. Do not infer missing
+manifest defaults or fetch external contract sources manually.
 
 Do not invent new generation/drift tooling during ordinary Go changes unless the user asks.
 
@@ -185,11 +198,14 @@ When reviewing or changing a Go project with `devctl.yaml`, check:
 - Do generated imports and directories match explicit `languages.go.generators` paths?
 - Do HTTP/gRPC/Kafka components declared in the manifest have matching transport/client/DI/runtime wiring?
 - Do DB providers use logical connection names and select backend variants through generated config?
-- Are Redis instances wired as named infrastructure clients instead of DB variants?
+- Are Redis connections wired as named infrastructure clients instead of DB variants?
+- Are SQLite/PostgreSQL migration directories and mise tasks derived from each variant's `migrations` object without adding golang-migrate to application runtime dependencies?
 - Are S3 buckets wired as logical resources through named S3 connections instead of duplicating credentials per bucket?
 - Are contract files treated as inputs and generated packages as outputs?
 - Are manual handlers, mappers, wrappers, and domain/service contracts outside generated directories?
 - Are generated DTOs kept out of domain/service contracts?
+- For an oapi-codegen Echo server, do `server_out` and native config have non-overlapping ownership,
+  and does the runtime validator use the embedded generated contract?
 - Was compatibility impact reviewed for external API/message contract changes?
 - If generation is involved, does project tooling context such as `.mise.toml` or Go tool declarations match the command used?
 - Are config fields loaded through generated config and `internal/deps`, not global config singletons?

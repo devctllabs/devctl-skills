@@ -1,0 +1,4 @@
+interface:
+  display_name: "Outside-in TDD"
+  short_description: "Outside-in TDD for production behavior"
+  default_prompt: "Use $outside-in-tdd to grow this behavior through scenario-sized RED/GREEN cycles and simplify under GREEN."

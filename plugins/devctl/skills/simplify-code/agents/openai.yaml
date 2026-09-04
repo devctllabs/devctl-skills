@@ -1,0 +1,4 @@
+interface:
+  display_name: "Simplify Code"
+  short_description: "Reduce cognitive complexity safely"
+  default_prompt: "Use $simplify-code to simplify this function or module while preserving its public behavior."

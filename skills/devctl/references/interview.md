@@ -44,10 +44,9 @@ languages:
   go:
     module: github.com/acme/myapp
     generators:
-      http: { tool: oapi-codegen, server_out: gen/serverhttp, client_out: gen/clienthttp }
-      grpc: { tool: buf, server_out: gen/servergrpc, client_out: gen/clientgrpc }
-      kafka: { lib: segmentio/kafka-go, consumers_out: gen/consumerkafka, producers_out: gen/producerkafka }
-      migrations: { tool: golang-migrate, path: migrations }
+      http: { oapi_config: tools/oapi/server.yaml, server_out: gen/serverhttp, client_out: gen/clienthttp }
+      grpc: { out: gen/grpc, buf_gen_config: tools/buf/grpc.gen.yaml }
+      kafka: { out: gen/kafka, buf_gen_config: tools/buf/kafka.gen.yaml }
 ```
 
 For Rust generator defaults, prefer flexible package targets over fixed package roles:
@@ -85,8 +84,8 @@ Ask which components the project needs:
 - gRPC clients and their contract sources.
 - Kafka consumers: name, topic, schema format, schema source/path, message, encoding, group env override.
 - Kafka producers: name, topic, schema format, schema source/path, message, encoding, topic env override.
-- DB connections: logical name, default backend, alternative backends, per-backend DSN env names, and migration path only when schema-managed.
-- Redis instances.
+- DB connections: logical name, default backend, alternative backends, per-backend DSN env names, and whether each SQLite/PostgreSQL variant owns golang-migrate files (default path `migrations/<connection>/<variant>`).
+- Redis connections: logical name, address env key, and optional credential-free local `addr_default`.
 - S3 logical buckets. Ask for shared S3 connection names only when the project has multiple endpoints, accounts, regions, or credential modes.
 - Metrics, logging, pprof, or other singleton infrastructure capabilities.
 
@@ -126,7 +125,7 @@ Ask whether runtime components are toggleable or always active when it matters.
 
 Defaults:
 
-- HTTP/gRPC servers, Kafka consumers, metrics, pprof, and workers may use `start`.
+- HTTP/gRPC/health servers, Kafka consumers, telemetry, pprof, and workers may use `start`.
 - Kafka producers do not use `start`; they are outbound adapters controlled by calling code.
 - If the user wants the component always active, omit `start`.
 - If using CLI, `--always` means omit `start`.

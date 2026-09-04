@@ -1,4 +1,4 @@
 interface:
   display_name: "Devctl Go"
   short_description: "Go services, libraries, monorepos"
-  default_prompt: "Use $devctl-go to preserve this repository's conventions while applying consumer-owned interfaces, explicit I/O adapters, scenario-sized RED/GREEN cycles, and Go-native quality checks."
+  default_prompt: "Use $devctl-go to preserve Go ownership and conventions, composing $outside-in-tdd for handwritten production behavior."

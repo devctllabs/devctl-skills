@@ -9,6 +9,7 @@
 - Filesystem Adapters
 - Mixed External Integrations
 - Dependency Wiring
+- Testing
 - Review Checklist
 
 ## Boundary Rule
@@ -20,6 +21,10 @@ consumer-owned interfaces. Treat these as external capabilities when they observ
 - HTTP, gRPC, SDK, message producer, or subprocess calls;
 - wall clocks, random/ID sources, environment reads, audit sinks, and business-significant
   telemetry.
+
+Transaction scope is the shared-contract exception to consumer ownership: use the narrowest needed
+`github.com/devctllabs/go-libs/txmanager.Manager` or `Managers` directly instead of declaring a
+local transaction interface.
 
 Pass required capabilities through constructors and accept `context.Context` on blocking or I/O
 operations. Wire concrete implementations in `internal/deps`; do not hide them behind package
@@ -51,19 +56,22 @@ Describe the smallest application capability the consumer needs:
 
 ```go
 type PackageCatalog interface {
+    // Load returns the package bundle identified by source.
     Load(ctx context.Context, source SourcePath) (PackageBundle, error)
 }
 
 type RunWorkspace interface {
+    // LoadResult loads the result for nodeID and attempt within runID.
     LoadResult(ctx context.Context, runID RunID, nodeID NodeID, attempt int) (ResultSpec, error)
+    // PublishOutputs atomically publishes the outputs described by params.
     PublishOutputs(ctx context.Context, params PublishOutputsParams) (PublishedOutputs, error)
 }
 ```
 
 Prefer operations such as `Load`, `Save`, `Reserve`, `MaterializeInputs`, or `Publish` over a
 generic filesystem interface with `Exists`, `Read`, `Write`, and `Copy`. Capability-level methods
-keep layout, locking, atomicity, and serialization together and let service tests use small fakes
-without reproducing `os`.
+keep layout, locking, atomicity, and serialization together and let service tests use narrow
+generated gomock mocks without reproducing `os`.
 
 Do not move application policy into the adapter. Services own state transitions, selection policy,
 cross-resource rules, and application operation order. Adapters own external mechanics, storage
@@ -102,6 +110,12 @@ Do not inject a second raw filesystem interface into every repository. Test the 
 against `t.TempDir()`. Accept `fs.FS` or another lower seam only when the project has a real alternate
 backend or the adapter itself coordinates behavior that a temporary filesystem cannot test clearly.
 
+When a repository needs rooted operating-system writes or copies from interchangeable read
+sources, use `github.com/devctllabs/go-libs/filesystem` and first read
+`go doc -all github.com/devctllabs/go-libs/filesystem`. Its `fs.FS` source model and narrow
+`Copier`, `Merger`, `Writer`, and `Remover` interfaces are infrastructure seams, not service or
+usecase ports. The repository still exposes a consumer-owned application capability upward.
+
 ## Mixed External Integrations
 
 Split workflows by external boundary and application policy. For plugin-backed discovery:
@@ -119,12 +133,21 @@ Use direct constructors or a small explicit dependency struct. Build concrete re
 and platform implementations in `internal/deps`, then inject them into services. Do not add a DI
 framework solely to enforce this boundary.
 
+## Testing
+
+Test value/path normalization as unit behavior. Test filesystem, OS, clock, ID, subprocess, and
+telemetry mechanisms at their concrete boundary using `t.TempDir`, controlled clocks/IDs, helper
+processes, or focused integration fixtures. Service tests use generated gomock capability mocks
+rather than raw OS mocks. Follow `testing-strategy.md`.
+
 ## Review Checklist
 
 - Does service/usecase code call `os`, `io/fs`, `exec`, SDK, driver, environment, clock, or random APIs directly?
-- Does every application-affecting external behavior enter through a consumer-owned interface?
+- Does every application-affecting external behavior enter through a consumer-owned interface,
+  except for the canonical shared `txmanager` contract?
 - Do interface methods describe application capabilities instead of copying a library API?
 - Are layout, serialization, locking, atomicity, and OS-level path safety inside adapters?
 - Are subprocess calls clients and filesystem/object-storage access repositories?
 - Does `platform` contain only genuinely shared domain-free code or concrete port implementations?
-- Can a service test use a small fake without creating files or mocking the standard library?
+- Can a service test use a narrow generated gomock mock without creating files or mocking the
+  standard library?

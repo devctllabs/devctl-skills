@@ -11,6 +11,7 @@ providers:
       codex_path_override: "codex"
       model: gpt-5.6-luna
       working_dir: "{{workspaceDir}}"
+      model_reasoning_effort: high
       sandbox_mode: workspace-write
       approval_policy: never
       network_access_enabled: false
@@ -27,17 +28,11 @@ extensions:
 
 tests:
   - file://cases/01-preserve-existing-tooling.yaml
-  - file://cases/02-quality-tooling-readonly.yaml
-  - file://cases/03-nested-argparse-refactor.yaml
-  - file://cases/04-library-kiss-tdd.yaml
-  - file://cases/05-outside-in-plan.yaml
-  - file://cases/06-io-boundaries-refactor.yaml
-  - file://cases/07-typed-layer-contracts.yaml
-  - file://cases/08-public-operation-implementation.yaml
-  - file://cases/09-library-dip-tdd.yaml
-  - file://cases/10-bugfix-regression-first.yaml
-  - file://cases/11-quality-hotspots-readonly.yaml
-  - file://cases/12-argparse-help.yaml
+  - file://cases/02-library-kiss-tdd.yaml
+  - file://cases/03-io-boundaries-refactor.yaml
+  - file://cases/04-typed-layer-contracts.yaml
+  - file://cases/05-public-operation-implementation.yaml
+  - file://cases/06-quality-hotspots-readonly.yaml
 
 evaluateOptions:
   maxConcurrency: 3

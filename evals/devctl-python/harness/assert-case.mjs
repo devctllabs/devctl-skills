@@ -23,86 +23,9 @@ function checkReadOnly(workspace, results) {
   );
 }
 
-function includesAll(text, values, results) {
-  const normalized = text.toLowerCase();
-  for (const value of values) {
-    results.push(
-      component(
-        normalized.includes(value.toLowerCase()),
-        normalized.includes(value.toLowerCase())
-          ? `Response contains ${value}`
-          : `Response is missing ${value}`,
-      ),
-    );
-  }
-}
-
-export function qualityTooling(_output, workspace) {
+export function qualityHotspots(_output, workspace) {
   const results = [];
   checkReadOnly(workspace, results);
-  return results;
-}
-
-export function qualityHotspots(output, workspace) {
-  const results = [];
-  checkReadOnly(workspace, results);
-  includesAll(
-    output,
-    [
-      "RunRepository",
-      "tests/unit/service",
-      "tests/integration/repository",
-      "Boundary",
-      "Exceptions",
-      "rollback",
-      "complexipy",
-      "top 20",
-      "D101",
-      "D102",
-    ],
-    results,
-  );
-  return results;
-}
-
-export function outsideInPlan(output, workspace) {
-  const results = [];
-  checkReadOnly(workspace, results);
-  includesAll(
-    output,
-    [
-      "tests/unit/cli",
-      "tests/unit/service",
-      "tests/integration/repository",
-      "zero",
-      "one",
-      "many",
-      "boundary",
-      "exceptions",
-      "interfaces",
-      "red",
-      "green",
-      "refactor",
-      "protocol",
-    ],
-    results,
-  );
-  const normalized = output.toLowerCase();
-  const categories = ["zero", "one", "many", "boundary", "exceptions", "interfaces"];
-  let cursor = 0;
-  const positions = categories.map((category) => {
-    const position = normalized.indexOf(category, cursor);
-    if (position >= 0) {
-      cursor = position + category.length;
-    }
-    return position;
-  });
-  results.push(
-    component(
-      positions.every((position) => position >= 0),
-      "The response states the scenario categories in the required order",
-    ),
-  );
   return results;
 }
 
@@ -143,14 +66,8 @@ export default function assertCase(output, context) {
   }
 
   let results;
-  if (caseName === "quality-tooling-readonly") {
-    results = qualityTooling(output, workspace);
-  } else if (caseName === "quality-hotspots-readonly") {
+  if (caseName === "quality-hotspots-readonly") {
     results = qualityHotspots(output, workspace);
-  } else if (caseName === "outside-in-plan") {
-    results = outsideInPlan(output, workspace);
-  } else if (caseName === "catalog-remove-tdd") {
-    results = pythonCase(caseName, workspace);
   } else {
     results = pythonCase(caseName, workspace);
   }

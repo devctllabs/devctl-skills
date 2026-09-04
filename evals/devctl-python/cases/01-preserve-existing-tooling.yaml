@@ -18,12 +18,25 @@
     fixtureDir: fixtures/preserve-existing-tooling
     targetSkillName: devctl-python
     targetSkillDir: ../../skills/devctl-python
+    dependencySkillDirs: ../../skills/outside-in-tdd,../../skills/simplify-code
     toolExecutables: python3
   assert:
     - type: javascript
       value: file://harness/assert-skill-used.mjs
       config:
         skillName: devctl-python
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: outside-in-tdd
+        beforeFileChangeRegex: "(tests|src)[/\\\\]"
+    - type: javascript
+      value: file://harness/assert-skill-used.mjs
+      config:
+        skillName: simplify-code
+        afterProductionPathRegex: "src[/\\\\]orders[/\\\\]service\\.py"
+        afterGreenCommandRegex: "python3.*unittest"
+        beforeFollowingFileChangeRegex: "(tests|src)[/\\\\]"
     - type: javascript
       value: file://harness/assert-case.mjs
       config:

@@ -4,7 +4,7 @@
 
 - Principle
 - Discovery
-- When To Use Generated Mocks
+- Interface Dependencies and Concrete Boundaries
 - Mock Generation
 - Test Package Boundaries
 - Gomock Style
@@ -14,13 +14,20 @@
 
 ## Principle
 
-Use generated `gomock` mocks for service/usecase and adapter boundary tests when dependencies are interfaces and behavior is easier to state as expectations than as a handwritten fake.
+Use generated `go.uber.org/mock/gomock` mocks for every injected interface dependency in new or
+changed unit tests. Do not implement DI interfaces with handwritten fakes, stubs, spies, callback
+structs, or ad hoc mocks. Do not replace an interface with a function type merely to avoid mock
+generation.
 
-Prefer repo-local conventions first. Use this reference as the fallback when the repo has no consistent gomock/mockgen pattern or when the user asks to standardize around generated mocks.
+Use `go-generate.md` for mockgen tool declarations and directive commands. Reuse repo-local
+conventions for mockgen flags, file naming, package location, and test package boundaries. An
+existing handwritten-double convention does not override the mandatory gomock rule for tests
+changed by the task. Do not migrate untouched legacy tests unless the user requests broader
+standardization.
 
 Do not use gomock as a substitute for repository integration tests when repository behavior depends on SQL, transactions, constraints, pagination, locking, or backend-specific mapping. Read `testing-strategy.md` for layer-level test ownership.
 
-Choose test scenarios with the ZOMBIES checklist in `testing-strategy.md` before deciding which dependency interactions need gomock expectations.
+Use the active owner scenario before deciding which dependency interactions need gomock expectations.
 
 ## Discovery
 
@@ -33,29 +40,37 @@ rg -n "package .+_test|NewMock|gomock.NewController" internal pkg -g '*_test.go'
 
 Reuse established local choices for:
 
-- mockgen command shape;
+- mockgen flags and interface grouping;
 - generated file naming;
 - `mocks/` package location;
 - same-package vs external-package tests;
 - expectation style;
 - generation and test commands.
 
-## When To Use Generated Mocks
+## Interface Dependencies and Concrete Boundaries
 
-Prefer generated gomock mocks for:
+Use generated gomock mocks for:
 
-- service tests that mock repository, client, policy, publisher, or transaction dependencies;
-- usecase tests that mock service interfaces or optional transaction managers;
+- service tests that mock repository, client, policy, publisher, or imported
+  `txmanager.Manager`/`Managers` dependencies;
+- usecase tests that mock service interfaces or imported `txmanager.Manager`/`Managers`;
 - transport tests where a handler receives a narrow service/usecase interface;
 - consumer tests that mock service/usecase calls after decode and validation;
 - client/repository-adjacent tests only when the dependency is another boundary, not the behavior under test.
 
-Prefer simple fakes or test servers when they make behavior clearer:
+Do not introduce mocks where no DI interface is injected. Use the real owned boundary or its
+protocol-native test facility when appropriate:
 
 - HTTP client tests often use `httptest.Server`;
-- SDK clients may use the SDK's test hooks;
+- SDK clients may use the SDK's test hooks when they do not implement an injected application
+  interface;
 - transport mapper tests often need only local values;
 - deterministic value-object tests should not use mocks.
+
+Use `github.com/stretchr/testify/require` for result and state assertions around gomock
+expectations. Keep `EXPECT()` responsible for dependency interaction contracts and `require`
+responsible for the returned behavior. Never call `require` from a gomock callback running in
+another goroutine; capture the value and assert it from the test goroutine after synchronization.
 
 ## Mock Generation
 
@@ -66,8 +81,11 @@ Prefer one directive per source file when practical, and usually generate one `m
 Default command:
 
 ```go
-//go:generate go run go.uber.org/mock/mockgen -destination mocks/service.go -package mocks -typed . Repository,Publisher
+//go:generate go tool mockgen -destination mocks/service.go -package mocks -typed . Repository,Publisher
 ```
+
+Declare `go.uber.org/mock/mockgen` as a tool in the owning module as required by
+`go-generate.md`.
 
 Use separate generated files only when a combined target becomes materially harder to read, creates an import cycle, or conflicts with local repo conventions.
 
@@ -95,7 +113,8 @@ Use generated constructors such as `mocks.NewMockRepository(ctrl)` and express b
 
 Rules:
 
-- prefer generated mocks over custom fake structs with counters, captured args, or ad hoc callbacks;
+- use generated mocks instead of custom fake structs with counters, captured args, or ad hoc
+  callbacks;
 - prefer exact arguments for meaningful values;
 - use `gomock.Any()` only for incidental values such as context, timestamps, or generated IDs;
 - use `gomock.InOrder` only when call order is part of the behavior;
@@ -110,6 +129,9 @@ Service/usecase tests:
 - mock repository/client/policy/service dependencies;
 - assert domain results, state transitions, validation, error wrapping/classification, and transaction behavior;
 - do not import concrete repository/client implementations.
+
+Generate transaction mocks from `github.com/devctllabs/go-libs/txmanager.Manager` or `Managers`.
+Do not declare an application-local transaction interface solely to generate a mock.
 
 Transport and consumer tests:
 
@@ -133,6 +155,8 @@ When replacing manual fakes:
 4. Replace call-state assertions with `EXPECT()` chains.
 5. Use `DoAndReturn` only when the old fake captured arguments or computed a response.
 6. Keep the same behavioral assertions unless the old test was asserting implementation detail.
+7. Replace changed assertions with `testify/require`; do not leave mixed assertion styles in the
+   modified test.
 
 ## Verification
 

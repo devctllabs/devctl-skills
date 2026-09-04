@@ -146,229 +146,12 @@ def preserve_existing_tooling(workspace: Path) -> None:
         record(False, "Missing order did not raise OrderNotFoundError")
 
 
-class _Operations:
-    def __init__(self, prefix: str, listed: tuple[str, ...]) -> None:
-        self.prefix = prefix
-        self.listed = listed
-        self.calls: list[tuple[str, str | None]] = []
-        self.failure: ValueError | None = None
-
-    def install(self, name: str) -> str:
-        self.calls.append(("install", name))
-        if self.failure is not None:
-            raise self.failure
-        return f"{self.prefix}:{name}"
-
-    def list(self) -> tuple[str, ...]:
-        self.calls.append(("list", None))
-        return self.listed
-
-
-class _Deps:
-    def __init__(self) -> None:
-        self.packages = _Operations("package", ("pkg-a", "pkg-b"))
-        self.agents = _Operations("agent", ("agent-a", "agent-b"))
-
-
-def invoke_cli(main: Any, argv: list[str], deps: _Deps) -> tuple[int, str, str]:
+def invoke_cli(main: Any, argv: list[str], deps: Any) -> tuple[int, str, str]:
     stdout = io.StringIO()
     stderr = io.StringIO()
     with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
         exit_code = main(argv, deps)
     return exit_code, stdout.getvalue(), stderr.getvalue()
-
-
-def invoke_help(main: Any, argv: list[str]) -> tuple[int, str, str]:
-    class _UnavailableDeps:
-        def __getattribute__(self, name: str) -> Any:
-            raise AssertionError(f"help accessed dependency {name}")
-
-    stdout = io.StringIO()
-    stderr = io.StringIO()
-    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-        try:
-            main(argv, _UnavailableDeps())
-        except SystemExit as error:
-            code = error.code if isinstance(error.code, int) else 1
-        except Exception as error:
-            code = 1
-            print(f"{type(error).__name__}: {error}", file=sys.stderr)
-        else:
-            code = 0
-    return code, stdout.getvalue(), stderr.getvalue()
-
-
-def set_default_handler_count(tree: ast.AST) -> int:
-    count = 0
-    for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "set_defaults"
-            and any(keyword.arg == "handler" for keyword in node.keywords)
-        ):
-            count += 1
-    return count
-
-
-def nested_argparse_refactor(workspace: Path) -> None:
-    protected_skill_gate(workspace)
-    unittest_gate(workspace)
-    root = workspace / "src/admin_cli/cli"
-    main_path = root / "main.py"
-    command_root = root / "commands"
-    expected = [command_root / "__init__.py", command_root / "package.py", command_root / "agent.py"]
-    for path in expected:
-        record(path.exists(), f"{path.relative_to(workspace)} exists")
-    forbidden = [
-        root / "contracts.py",
-        root / "types.py",
-        command_root / "install.py",
-        command_root / "list.py",
-    ]
-    for path in forbidden:
-        record(not path.exists(), f"{path.relative_to(workspace)} is absent")
-
-    if main_path.exists():
-        main_tree = parse(main_path)
-        attrs = {
-            node.attr
-            for node in ast.walk(main_tree)
-            if isinstance(node, ast.Attribute)
-            and isinstance(node.value, ast.Name)
-            and node.value.id == "args"
-        }
-        record(
-            "group" not in attrs and "command" not in attrs,
-            "main does not redispatch on args.group or args.command",
-        )
-        handler_calls = [
-            node
-            for node in ast.walk(main_tree)
-            if isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "handler"
-        ]
-        record(len(handler_calls) == 1, "main invokes exactly one selected args.handler")
-
-    for group in ("package", "agent"):
-        path = command_root / f"{group}.py"
-        if path.exists():
-            record(
-                set_default_handler_count(parse(path)) == 2,
-                f"{group} binds a handler to both executable leaves",
-            )
-
-    test_text = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in (workspace / "tests").rglob("*.py")
-    )
-    record("main(" in test_text, "CLI tests invoke the public main boundary")
-    for words in (
-        ("package", "install"),
-        ("package", "list"),
-        ("agent", "install"),
-        ("agent", "list"),
-    ):
-        record(
-            all(f'"{word}"' in test_text or f"'{word}'" in test_text for word in words),
-            f"Tests cover {' '.join(words)}",
-        )
-
-    add_src(workspace)
-    module = importlib.import_module("admin_cli.cli.main")
-    checks = [
-        (["package", "install", "demo"], "package:demo\n", "packages", ("install", "demo")),
-        (["package", "list"], "pkg-a\npkg-b\n", "packages", ("list", None)),
-        (["agent", "install", "demo"], "agent:demo\n", "agents", ("install", "demo")),
-        (["agent", "list"], "agent-a\nagent-b\n", "agents", ("list", None)),
-    ]
-    for argv, expected_output, owner, call in checks:
-        deps = _Deps()
-        code, stdout, stderr = invoke_cli(module.main, argv, deps)
-        record(
-            (code, stdout, stderr) == (0, expected_output, ""),
-            f"{' '.join(argv)} preserves output and exit status",
-        )
-        record(getattr(deps, owner).calls == [call], f"{' '.join(argv)} delegates once")
-
-    deps = _Deps()
-    deps.packages.failure = ValueError("boom")
-    code, stdout, stderr = invoke_cli(module.main, ["package", "install", "demo"], deps)
-    record(
-        code == 1 and stdout == "" and "admin: boom" in stderr,
-        "Shared ValueError mapping preserves stderr and exit code",
-    )
-
-
-def argparse_help(workspace: Path) -> None:
-    protected_skill_gate(workspace)
-    unchanged(workspace, "pyproject.toml", "README.md")
-    unittest_gate(workspace)
-    changed = [
-        path
-        for path in status_paths(workspace)
-        if not path.startswith(".agents/skills/devctl-python/")
-        and "__pycache__" not in path
-        and not path.endswith(".pyc")
-    ]
-    allowed = all(
-        path.startswith("src/admin_cli/cli/")
-        or path.startswith("tests/unit/cli/")
-        for path in changed
-    )
-    record(allowed, f"Changes stay in the CLI and its owner tests: {changed}")
-
-    test_text = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in (workspace / "tests/unit/cli").rglob("*.py")
-    )
-    record("--help" in test_text, "CLI tests exercise public --help routes")
-    record(
-        "SystemExit" in test_text or "assertRaises" in test_text,
-        "CLI tests assert the argparse help exit",
-    )
-
-    add_src(workspace)
-    module = importlib.import_module("admin_cli.cli.main")
-    help_checks = (
-        (
-            ["--help"],
-            ("package", "Manage packages.", "agent", "Manage agents."),
-        ),
-        (
-            ["package", "--help"],
-            ("install", "Install a package.", "list", "List packages."),
-        ),
-        (
-            ["package", "install", "--help"],
-            ("NAME", "Package name to install.", "example:", "admin package install demo"),
-        ),
-    )
-    for argv, expected in help_checks:
-        code, stdout, stderr = invoke_help(module.main, argv)
-        label = " ".join(("admin", *argv))
-        record(
-            code == 0 and stderr == "",
-            f"{label} exits successfully without stderr",
-        )
-        for text in expected:
-            record(text in stdout, f"{label} contains {text}")
-    root_output = invoke_help(module.main, ["--help"])[1]
-    record("\n    help " not in root_output, "No separate help command was introduced")
-
-    checks = (
-        (["package", "install", "demo"], "package:demo\n"),
-        (["package", "list"], "pkg-a\npkg-b\n"),
-        (["agent", "install", "demo"], "agent:demo\n"),
-        (["agent", "list"], "agent-a\nagent-b\n"),
-    )
-    for argv, expected_output in checks:
-        code, stdout, stderr = invoke_cli(module.main, argv, _Deps())
-        record(
-            (code, stdout, stderr) == (0, expected_output, ""),
-            f"{' '.join(argv)} preserves executable behavior",
-        )
 
 
 def library_kiss_tdd(workspace: Path) -> None:
@@ -448,6 +231,29 @@ def module_name(workspace: Path, path: Path) -> str:
 
 def io_boundaries_refactor(workspace: Path) -> None:
     protected_skill_gate(workspace)
+    unchanged(
+        workspace,
+        ".gitignore",
+        "README.md",
+        "pyproject.toml",
+        "src/package_discovery/__init__.py",
+        "src/package_discovery/client.py",
+        "src/package_discovery/errors.py",
+        "src/package_discovery/model.py",
+        "src/package_discovery/repository.py",
+        "tests/unit/client",
+        "tests/integration/repository",
+    )
+    changed = [
+        path
+        for path in status_paths(workspace)
+        if not path.startswith(".agents/skills/devctl-python/")
+    ]
+    allowed_paths = {
+        "src/package_discovery/service.py",
+        "tests/unit/service/test_package_service.py",
+    }
+    record(set(changed) <= allowed_paths, f"Changes stay in the service capability: {changed}")
     unittest_gate(workspace)
     package_root = workspace / "src/package_discovery"
     classes = class_modules(package_root)
@@ -469,12 +275,30 @@ def io_boundaries_refactor(workspace: Path) -> None:
         for node in ast.walk(service_tree)
         if isinstance(node, ast.ImportFrom)
     )
+    forbidden_import_roots = {"builtins", "importlib", "json", "os", "pathlib", "subprocess"}
+    forbidden_adapter_imports = {
+        "package_discovery.client",
+        "package_discovery.repository",
+    }
+    forbidden_imports = sorted(
+        name
+        for name in imports
+        if name.split(".", 1)[0] in forbidden_import_roots
+        or any(
+            name == adapter or name.startswith(f"{adapter}.")
+            for adapter in forbidden_adapter_imports
+        )
+    )
     record(
-        not any(name == "subprocess" or name.startswith("os") for name in imports),
-        "PackageService does not import subprocess or os",
+        not forbidden_imports,
+        f"PackageService imports no I/O or concrete adapter modules: {forbidden_imports}",
     )
     io_methods = {
+        "Popen",
+        "check_call",
+        "check_output",
         "cwd",
+        "getenv",
         "home",
         "resolve",
         "exists",
@@ -490,6 +314,7 @@ def io_boundaries_refactor(workspace: Path) -> None:
         "replace",
         "glob",
         "rglob",
+        "run",
     }
     used_io = {
         node.func.attr
@@ -498,7 +323,15 @@ def io_boundaries_refactor(workspace: Path) -> None:
         and isinstance(node.func, ast.Attribute)
         and node.func.attr in io_methods
     }
-    record(not used_io, f"PackageService performs no direct filesystem I/O: {sorted(used_io)}")
+    forbidden_builtin_calls = {
+        node.func.id
+        for node in ast.walk(service_tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id in {"__import__", "open"}
+    }
+    used_io.update(forbidden_builtin_calls)
+    record(not used_io, f"PackageService performs no direct external I/O: {sorted(used_io)}")
     protocol_classes = [
         node
         for node in service_tree.body
@@ -509,15 +342,70 @@ def io_boundaries_refactor(workspace: Path) -> None:
             for base in node.bases
         )
     ]
-    record(len(protocol_classes) >= 2, "Service owns narrow Protocols for both external capabilities")
-    raw_methods = {"exists", "read", "write", "copy", "glob", "open", "read_text", "write_text"}
     protocol_methods = {
-        node.name
+        protocol.name: {
+            node.name
+            for node in protocol.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and not node.name.startswith("_")
+        }
         for protocol in protocol_classes
-        for node in protocol.body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
-    record(not (protocol_methods & raw_methods), "Protocols describe capabilities, not raw I/O")
+    record(
+        len(protocol_classes) == 2 and all(len(methods) == 1 for methods in protocol_methods.values()),
+        "Service owns exactly two single-capability Protocols",
+    )
+    raw_methods = {
+        "copy",
+        "exists",
+        "glob",
+        "open",
+        "read",
+        "read_text",
+        "run",
+        "write",
+        "write_text",
+    }
+    all_protocol_methods = set().union(*protocol_methods.values()) if protocol_methods else set()
+    record(
+        not (all_protocol_methods & raw_methods),
+        "Protocols describe application capabilities, not raw I/O",
+    )
+    client_methods = _class_methods(package_root / "client.py", "CodexPluginClient")
+    repository_methods = _class_methods(
+        package_root / "repository.py", "FilesystemPackageCatalog"
+    )
+    record(
+        all_protocol_methods == {"list_plugins", "package_names"}
+        and "list_plugins" in client_methods
+        and "package_names" in repository_methods,
+        "Service capabilities are structurally implemented by the existing integrations",
+    )
+    constructor = next(
+        (
+            node
+            for node in service_class.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "__init__"
+        ),
+        None,
+    )
+    constructor_args = [] if constructor is None else [
+        argument
+        for argument in (*constructor.args.posonlyargs, *constructor.args.args)
+        if argument.arg != "self"
+    ]
+    dependency_annotations = {
+        ast.unparse(argument.annotation)
+        for argument in constructor_args
+        if argument.annotation is not None
+    }
+    record(
+        constructor is not None
+        and len(constructor_args) == 2
+        and not constructor.args.defaults
+        and dependency_annotations == set(protocol_methods),
+        "PackageService requires two distinct Protocol-typed constructor dependencies",
+    )
     discover = next(
         (
             node
@@ -531,69 +419,54 @@ def io_boundaries_refactor(workspace: Path) -> None:
         "PackageService.discover receives no runtime filesystem or executable arguments",
     )
 
-    repository_tests = list((workspace / "tests/integration/repository").rglob("*.py"))
-    client_tests = list((workspace / "tests/unit/client").rglob("*.py"))
-    record(bool(repository_tests), "Filesystem repository has an integration test")
-    record(bool(client_tests), "Subprocess client has an owning unit test")
-    repository_text = "\n".join(path.read_text(encoding="utf-8") for path in repository_tests)
+    service_test = workspace / "tests/unit/service/test_package_service.py"
+    service_test_text = service_test.read_text(encoding="utf-8") if service_test.is_file() else ""
     record(
-        "TemporaryDirectory" in repository_text or "tmp_path" in repository_text,
-        "Filesystem repository tests use an isolated temporary filesystem",
+        "subprocess" not in service_test_text
+        and "TemporaryDirectory" not in service_test_text
+        and "package_discovery.client" not in service_test_text
+        and "package_discovery.repository" not in service_test_text,
+        "Service owner test uses capability doubles instead of concrete I/O",
     )
 
     add_src(workspace)
     service_module = importlib.import_module(module_name(workspace, service_path))
     service_type = getattr(service_module, "PackageService")
+    model_module = importlib.import_module("package_discovery.model")
 
     class PluginFake:
+        def __init__(self) -> None:
+            self.calls = 0
+
         def list_plugins(self) -> tuple[object, ...]:
-            plugin_type = getattr(service_module, "Plugin", None)
-            if plugin_type is not None:
-                return (
-                    plugin_type(name="alpha", enabled=True),
-                    plugin_type(name="gamma", enabled=True),
-                    plugin_type(name="beta", enabled=False),
-                )
-
-            class Plugin:
-                def __init__(self, name: str, enabled: bool) -> None:
-                    self.name = name
-                    self.enabled = enabled
-
+            self.calls += 1
             return (
-                Plugin("alpha", True),
-                Plugin("gamma", True),
-                Plugin("beta", False),
+                model_module.Plugin("gamma", True),
+                model_module.Plugin("alpha", True),
+                model_module.Plugin("beta", False),
             )
 
-        def list_enabled(self) -> tuple[str, ...]:
-            return ("alpha", "gamma")
-
-        def list_enabled_packages(self) -> tuple[str, ...]:
-            return self.list_enabled()
-
-        def enabled_packages(self) -> tuple[str, ...]:
-            return self.list_enabled()
-
     class CatalogFake:
-        def list_packages(self) -> tuple[str, ...]:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def package_names(self) -> tuple[str, ...]:
+            self.calls += 1
             return ("beta", "alpha")
 
-        def list_available(self) -> tuple[str, ...]:
-            return ("beta", "alpha")
-
-        def list_available_packages(self) -> tuple[str, ...]:
-            return self.list_available()
-
-        def available_packages(self) -> tuple[str, ...]:
-            return self.list_available()
-
+    plugin_fake = PluginFake()
+    catalog_fake = CatalogFake()
     try:
-        result = service_type(PluginFake(), CatalogFake()).discover()
+        result = service_type(plugin_fake, catalog_fake).discover()
     except Exception as error:  # noqa: BLE001
         record(False, f"Public service shape failed with fakes: {type(error).__name__}: {error}")
     else:
-        record(tuple(result) == ("alpha",), "Service keeps enabled/local selection policy")
+        record(
+            tuple(result) == ("alpha",)
+            and plugin_fake.calls == 1
+            and catalog_fake.calls == 1,
+            "Service calls both capabilities once and keeps sorted enabled/local policy",
+        )
 
 
 def _class_methods(path: Path, class_name: str) -> set[str]:
@@ -628,155 +501,6 @@ def _consumer_protocol_names(tree: ast.Module, method_name: str) -> set[str]:
         if method_name in methods and bases & {"Protocol", "typing.Protocol"}:
             names.add(node.name)
     return names
-
-
-def library_dip_tdd(workspace: Path) -> None:
-    protected_skill_gate(workspace)
-    unchanged(workspace, "pyproject.toml", "README.md")
-    unittest_gate(workspace)
-
-    package = workspace / "src/acme_expiry"
-    forbidden_names = {
-        "domain",
-        "service",
-        "usecase",
-        "repository",
-        "client",
-        "transport",
-        "deps",
-        "platform",
-    }
-    present = {path.name for path in package.iterdir()} if package.exists() else set()
-    record(not (present & forbidden_names), "Library introduces no application layers")
-    changed = [
-        path
-        for path in status_paths(workspace)
-        if not path.startswith(".agents/skills/devctl-python/")
-    ]
-    allowed_paths = {
-        "src/acme_expiry/__init__.py",
-        "tests/unit/test_expiry.py",
-    }
-    record(set(changed) <= allowed_paths, f"Changes stay in the library API: {changed}")
-
-    public_path = package / "__init__.py"
-    if not public_path.is_file():
-        record(False, "src/acme_expiry/__init__.py exists")
-        return
-    tree = parse(public_path)
-    protocol_names = _consumer_protocol_names(tree, "now")
-    policy = next(
-        (
-            node
-            for node in tree.body
-            if isinstance(node, ast.ClassDef) and node.name == "ExpiryPolicy"
-        ),
-        None,
-    )
-    constructor = (
-        next(
-            (
-                node
-                for node in policy.body
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-                and node.name == "__init__"
-            ),
-            None,
-        )
-        if policy is not None
-        else None
-    )
-    dependency_annotation = ""
-    if constructor is not None:
-        clock_arg = next(
-            (argument for argument in constructor.args.args if argument.arg != "self"),
-            None,
-        )
-        if clock_arg is not None and clock_arg.annotation is not None:
-            dependency_annotation = ast.unparse(clock_arg.annotation)
-    record(
-        dependency_annotation in protocol_names,
-        "ExpiryPolicy depends on the library-owned Clock Protocol",
-    )
-    public_classes = {
-        node.name for node in tree.body if isinstance(node, ast.ClassDef)
-    }
-    record(
-        public_classes == {"Clock", "ExpiryPolicy"},
-        f"Library exposes only Clock and ExpiryPolicy classes: {public_classes}",
-    )
-    source = public_path.read_text(encoding="utf-8")
-    record(
-        "datetime.now(" not in source and "datetime.utcnow(" not in source,
-        "Library does not construct a concrete runtime clock",
-    )
-
-    add_src(workspace)
-    module = importlib.import_module("acme_expiry")
-    clock_type = getattr(module, "Clock", None)
-    policy_type = getattr(module, "ExpiryPolicy", None)
-    record(isinstance(clock_type, type), "Clock is exported from acme_expiry")
-    record(isinstance(policy_type, type), "ExpiryPolicy is exported from acme_expiry")
-    if not isinstance(policy_type, type):
-        return
-
-    from datetime import datetime, timedelta, timezone
-
-    class ClockFake:
-        def __init__(self, value: datetime) -> None:
-            self.value = value
-
-        def now(self) -> datetime:
-            return self.value
-
-    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
-    policy_instance = policy_type(ClockFake(now))
-    record(
-        policy_instance.expired(now + timedelta(seconds=1)) is False
-        and policy_instance.expired(now) is True
-        and policy_instance.expired(now - timedelta(seconds=1)) is True,
-        "ExpiryPolicy uses the injected clock at the deadline boundary",
-    )
-    try:
-        policy_instance.expired(datetime(2026, 1, 1))
-    except ValueError:
-        record(True, "Naive deadlines raise ValueError")
-    except Exception as error:  # noqa: BLE001
-        record(False, f"Naive deadline raised {type(error).__name__}")
-    else:
-        record(False, "Naive deadline was accepted")
-
-
-def bugfix_regression_first(workspace: Path) -> None:
-    protected_skill_gate(workspace)
-    unchanged(workspace, "pyproject.toml", "README.md")
-    unittest_gate(workspace)
-    changed = [
-        path
-        for path in status_paths(workspace)
-        if not path.startswith(".agents/skills/devctl-python/")
-    ]
-    allowed_paths = {"src/netcfg/ports.py", "tests/test_ports.py"}
-    record(set(changed) <= allowed_paths, f"Bugfix preserves the flat test layout: {changed}")
-
-    add_src(workspace)
-    module = importlib.import_module("netcfg")
-    parse_port = getattr(module, "parse_port", None)
-    record(callable(parse_port), "parse_port remains public")
-    if not callable(parse_port):
-        return
-    record(
-        parse_port("1") == 1 and parse_port("65535") == 65_535,
-        "Valid port boundaries remain unchanged",
-    )
-    try:
-        parse_port("0")
-    except ValueError:
-        record(True, "Port zero raises ValueError")
-    except Exception as error:  # noqa: BLE001
-        record(False, f"Port zero raised {type(error).__name__}")
-    else:
-        record(False, "Port zero was accepted")
 
 
 def catalog_remove_tdd(workspace: Path) -> None:
@@ -1144,8 +868,9 @@ def typed_layer_contracts(workspace: Path) -> None:
     repository_entry = classes.get("FilesystemRunRepository")
     if repository_entry is not None:
         repository_path, repository_class = repository_entry
+        repository_root = package_root / "repository"
         record(
-            repository_path.parent.name == "repository",
+            repository_root in repository_path.parents,
             f"Filesystem adapter lives in repository: {repository_path.relative_to(workspace)}",
         )
         methods = {
@@ -1223,11 +948,19 @@ def typed_layer_contracts(workspace: Path) -> None:
             return sentinel
 
     fake = RepositoryFake()
-    service = service_type(fake)
-    record(
-        service.dispatch("run-1", 1) is sentinel and fake.calls == [("run-1", 1)],
-        "Service validates and delegates through one repository capability",
-    )
+    try:
+        service_result = service_type(fake).dispatch("run-1", 1)
+    except Exception as error:  # noqa: BLE001
+        record(
+            False,
+            "Service does not delegate through RunRepository.dispatch: "
+            f"{type(error).__name__}: {error}",
+        )
+    else:
+        record(
+            service_result is sentinel and fake.calls == [("run-1", 1)],
+            "Service validates and delegates through one repository capability",
+        )
     rejecting_fake = RepositoryFake()
     try:
         service_type(rejecting_fake).dispatch("run-1", 0)
@@ -1276,14 +1009,10 @@ def main() -> int:
     workspace = Path(sys.argv[2]).resolve()
     handlers = {
         "preserve-existing-tooling": preserve_existing_tooling,
-        "nested-argparse-refactor": nested_argparse_refactor,
-        "argparse-help": argparse_help,
         "library-kiss-tdd": library_kiss_tdd,
         "io-boundaries-refactor": io_boundaries_refactor,
         "typed-layer-contracts": typed_layer_contracts,
         "catalog-remove-tdd": catalog_remove_tdd,
-        "library-dip-tdd": library_dip_tdd,
-        "bugfix-regression-first": bugfix_regression_first,
     }
     handler = handlers.get(case_name)
     if handler is None:

@@ -1,1 +1,0 @@
-"""Filesystem-backed catalog persistence."""
