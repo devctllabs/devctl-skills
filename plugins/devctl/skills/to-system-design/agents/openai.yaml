@@ -1,0 +1,7 @@
+interface:
+  display_name: "To System Design"
+  short_description: "Publish and approve a feature System Design"
+  default_prompt: "Use $to-system-design to publish the agreed feature design for review."
+
+policy:
+  allow_implicit_invocation: false

@@ -68,6 +68,67 @@ implementation-skill routing.
 - Safe CLI workflows for `validate`, `inspect`, `sync`, `lint`, and `gen`
 - Routing to the matching `devctl-*` skill
 
+### devctl-baseline-docs
+
+An explicit-only discovery workflow for establishing accepted product and technical context in an
+existing repository.
+
+**Use when:**
+
+- Performing a project's initial technical and domain discovery
+- Establishing current product and architecture docs, `CONTEXT.md`, PDRs, and ADRs
+- Resolving repository ambiguities with the project owner before documenting them
+
+**Covers:**
+
+- Evidence-led coverage of every subsystem, boundary, integration, and critical flow
+- Owner interviews with explicit resolution or deferral of ambiguities
+- One approval gate before writing current docs, confirmed glossary terms, PDRs, and ADRs
+
+### product-modeling
+
+An automatically available discipline for sharpening product behavior and recording only
+significant accepted Product Decision Records.
+
+**Covers:**
+
+- Concrete product scenarios, business rules, constraints, and decision authority
+- Separation of current behavior, proposed behavior, and open product questions
+- Strict PDR qualification and sequential `docs/product/decisions/` records
+
+### product-questions
+
+An explicit-only companion to feature interviews that maintains product questions and faithful
+answers in the configured issue tracker.
+
+**Covers:**
+
+- One question artifact per feature with stable `PQ-NNN` identifiers
+- Blocking branches, optional team proposals, and free-form product responses
+- In-place updates and tracker closure after every question is answered
+
+### to-system-design
+
+An explicit-only synthesis step that publishes a reviewable System Design before implementation
+planning.
+
+**Covers:**
+
+- Adaptive feature design with useful Mermaid diagrams
+- Proposed, Accepted, and Implemented lifecycle states
+- Review feedback updates in place and explicit handoff to `to-spec`
+
+### reconcile-docs
+
+An explicit-only post-implementation workflow for reconciling actual behavior with durable current
+documentation.
+
+**Covers:**
+
+- Product, architecture, glossary, PDR, and ADR impact discovery
+- Drift detection before promoting implementation as current truth
+- System Design implementation links and current-doc updates
+
 ### devctl-go
 
 Go architecture guidance for services, reusable libraries, packages, and
@@ -181,6 +242,25 @@ CLIs, workers, and Tauri applications.
 - Consumer-owned traits, outside-in TDD, Cargo checks, and Clippy
 - Tauri/UI monorepos, Docker, Compose, Helm, and Kubernetes
 
+## Product and System Documentation Workflow
+
+Use the documentation workflow to establish an existing repository's baseline, review feature
+designs before implementation planning, and reconcile current docs after delivery.
+
+```text
+$devctl-baseline-docs
+→ $grill-with-docs + $product-questions
+→ $to-system-design
+→ $to-spec
+→ $to-tickets
+→ implementation
+→ $reconcile-docs
+```
+
+`product-modeling` activates automatically when product behavior is discussed. See the
+[Product and System Documentation Workflow](docs/documentation-workflow.md) for prerequisites,
+standard prompts, optional paths, and feedback loops.
+
 ## Install the Codex Plugin
 
 Add the GitHub repository as a marketplace, then install the plugin:
@@ -209,6 +289,10 @@ Invoke a skill explicitly when needed:
 
 ```text
 Use $pragmatic-work to keep this task simple, focused, and well-structured.
+Use $devctl-baseline-docs to establish this repository's accepted product and technical documentation baseline.
+Use $product-questions alongside a feature interview to capture questions that need product input.
+Use $to-system-design to publish an agreed feature design for review before running $to-spec.
+Use $reconcile-docs after implementation to align current product and architecture docs with the actual change.
 Use $devctl to create a project manifest and choose the implementation skill.
 Use $devctl-openapi to add a resource domain to an OpenAPI 3.1 contract.
 Use $devctl-react-vite to organize a React + Vite TypeScript application.
@@ -222,9 +306,8 @@ references relevant to the task.
 
 ## Plugin Maintenance
 
-The root `skills/devctl*`, `skills/outside-in-tdd`, and `skills/simplify-code` directories are the
-source of truth. The installable bundle under `plugins/devctl/skills/` is generated and committed
-to the repository.
+The selected directories under root `skills/` are the source of truth. The installable bundle
+under `plugins/devctl/skills/` is generated and committed to the repository.
 
 Regenerate the bundle after changing a Devctl skill:
 
@@ -239,7 +322,7 @@ python3 scripts/sync_devctl_plugin.py --check
 ```
 
 The synchronizer includes current and future directories named `devctl` or `devctl-*` plus the
-shared composition skills `outside-in-tdd` and `simplify-code`.
+explicitly listed shared composition and documentation skills.
 
 ## Skill Structure
 

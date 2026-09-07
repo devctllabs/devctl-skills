@@ -13,7 +13,16 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = REPOSITORY_ROOT / "skills"
 TARGET_ROOT = REPOSITORY_ROOT / "plugins" / "devctl" / "skills"
-SHARED_SKILL_NAMES = frozenset({"outside-in-tdd", "simplify-code"})
+SHARED_SKILL_NAMES = frozenset(
+    {
+        "outside-in-tdd",
+        "product-modeling",
+        "product-questions",
+        "reconcile-docs",
+        "simplify-code",
+        "to-system-design",
+    }
+)
 
 
 def parse_args() -> argparse.Namespace:

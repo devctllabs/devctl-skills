@@ -1,0 +1,7 @@
+interface:
+  display_name: "Reconcile Docs"
+  short_description: "Align current docs with implemented behavior"
+  default_prompt: "Use $reconcile-docs to reconcile this implemented change with the project's current documentation."
+
+policy:
+  allow_implicit_invocation: false
