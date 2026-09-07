@@ -1,0 +1,7 @@
+interface:
+  display_name: "Devctl Baseline Docs"
+  short_description: "Bootstrap accepted product and system docs"
+  default_prompt: "Use $devctl-baseline-docs to discover this repository and establish its accepted product and technical documentation baseline."
+
+policy:
+  allow_implicit_invocation: false
