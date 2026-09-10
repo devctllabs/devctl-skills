@@ -1,0 +1,4 @@
+interface:
+  display_name: "Conventional Commit"
+  short_description: "Draft branch, commit, and PR text suggestions"
+  default_prompt: "Use $conventional-commit to draft the complete change package for my current changes: commit title and body, branch name, and PR title and body."
