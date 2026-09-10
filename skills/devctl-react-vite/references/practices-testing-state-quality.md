@@ -21,6 +21,8 @@ Includes best practices, testing strategy, state management options, and code qu
   - Option 3: Context API (For Simple Cases)
 - Code Quality Tools
   - ESLint Configuration
+  - Complexity Policy
+  - Existing Projects
   - Prettier Configuration
   - Husky + Lint-Staged
 
@@ -395,21 +397,110 @@ export const ThemeProvider: FC<{ children: ReactNode }> = ({ children }) => {
 ## Code Quality Tools
 
 ### ESLint Configuration
-```json
-{
-  "extends": [
-    "eslint:recommended",
-    "plugin:react/recommended",
-    "plugin:react-hooks/recommended",
-    "plugin:@typescript-eslint/recommended"
-  ],
-  "rules": {
-    "react/prop-types": "off",
-    "@typescript-eslint/no-unused-vars": "warn",
-    "@typescript-eslint/explicit-module-boundary-types": "off"
-  }
-}
+
+Use the repository's coherent lint engine and configuration first. For a new project or an explicit
+ESLint standardization, use flat config with `@eslint/js`, `typescript-eslint`, React Hooks, and
+`eslint-plugin-sonarjs`. Register SonarJS directly for cognitive complexity; enabling its complete
+recommended preset is a separate policy decision because it adds unrelated rules.
+
+Merge project-specific Storybook, import, accessibility, and generated-code presets into this
+baseline:
+
+```typescript
+import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
+import sonarjs from 'eslint-plugin-sonarjs';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import tseslint from 'typescript-eslint';
+
+const generatedCode = [
+  'src/shared/services/api/generated/**',
+  'src/**/generated/**',
+  'src/**/vendor/**',
+];
+
+export default defineConfig(
+  globalIgnores(['dist/**', 'coverage/**', 'storybook-static/**']),
+  js.configs.recommended,
+  tseslint.configs.recommended,
+  reactHooks.configs.flat.recommended,
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: generatedCode,
+    rules: {
+      complexity: ['error', 10],
+      'max-depth': ['error', 4],
+      'max-params': ['error', 4],
+      'max-statements': ['error', 60],
+    },
+  },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: [
+      ...generatedCode,
+      'src/**/*.test.{ts,tsx}',
+      'src/**/*.spec.{ts,tsx}',
+      'src/**/*.stories.{ts,tsx}',
+      'src/test/**',
+    ],
+    plugins: { sonarjs },
+    rules: {
+      'max-lines-per-function': [
+        'error',
+        { max: 100, skipBlankLines: true, skipComments: true },
+      ],
+      'sonarjs/cognitive-complexity': ['error', 15],
+    },
+  },
+);
 ```
+
+The four structural rules apply to handwritten production, test, and story files under `src`.
+The two noisier function-shape rules apply to handwritten production code. Adapt the generated and
+vendor globs to real repository boundaries rather than copying paths that do not exist.
+
+### Complexity Policy
+
+Treat a violation as a refactoring prompt. Flatten control flow, separate orchestration from
+decisions, or extract a cohesive owner. Avoid tiny pass-through helpers that only move the score,
+and keep an unavoidable suppression beside the affected code with the rule name and reason. Use
+`$simplify-code` when a behavior-preserving reduction is non-trivial.
+
+Passing the ceilings is a gate, not proof of simple ownership. During complexity review, inspect
+clusters of threshold-adjacent functions when the available report exposes their scores; several
+such functions in one feature usually indicate a responsibility hotspot.
+
+Preserve an established Biome or Oxlint setup when its stable native rules cover the same intent.
+Do not add ESLint as a second engine solely to reproduce every numeric signal. Make an engine
+migration or an intentionally reduced native baseline explicit when exact parity is unavailable.
+
+References: [ESLint complexity](https://eslint.org/docs/latest/rules/complexity),
+[ESLint function limits](https://eslint.org/docs/latest/rules/max-lines-per-function), and
+[SonarJS cognitive complexity](https://github.com/SonarSource/SonarJS/tree/master/packages/analysis/src/jsts/rules/S3776).
+
+### Existing Projects
+
+Keep all six rules at `error` when adopting them in a current ESLint project. If legacy violations
+cannot be fixed in the same tooling change, use ESLint bulk suppressions for only these rules and
+commit the generated `eslint-suppressions.json`. New violations then remain blocking:
+
+```text
+pnpm exec eslint src --fix \
+  --suppress-rule complexity \
+  --suppress-rule max-depth \
+  --suppress-rule max-params \
+  --suppress-rule max-statements \
+  --suppress-rule max-lines-per-function \
+  --suppress-rule sonarjs/cognitive-complexity
+```
+
+Review the baseline before committing it. After reducing legacy complexity, run
+`pnpm exec eslint src --prune-suppressions` and commit the smaller file. Prefer this ratchet over
+folder-wide ignores or leaving the rules permanently at warning severity. If the established
+ESLint version lacks bulk suppressions, treat upgrading it as an explicit tooling migration rather
+than inventing broad exemptions.
+
+Reference: [ESLint bulk suppressions](https://eslint.org/docs/latest/use/suppressions).
 
 ### Prettier Configuration
 ```json

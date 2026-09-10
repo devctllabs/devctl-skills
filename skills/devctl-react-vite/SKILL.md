@@ -28,7 +28,7 @@ Use this skill to organize React + Vite + TypeScript apps around feature modules
 - Read `references/typescript-and-naming.md` for `tsconfig.json`, `vite.config.ts` path aliases, naming conventions, component/hook/service/type examples, and common shared types.
 - Read `references/collection-queries.md` when adding or changing list/search sorting, filtering, pagination, search state, or collection query contracts.
 - Read `references/feature-workflow.md` when adding or scaffolding a new feature module, including types, service, React Query hooks, components, pages, and public exports.
-- Read `references/practices-testing-state-quality.md` for component organization, type safety, custom hooks, error handling, environment variables, unit/integration tests, MSW HTTP-boundary service adapter tests, React Query, Zustand, Context API, ESLint, Prettier, and lint-staged guidance.
+- Read `references/practices-testing-state-quality.md` for component organization, type safety, custom hooks, error handling, environment variables, unit/integration tests, MSW HTTP-boundary service adapter tests, React Query, Zustand, Context API, ESLint complexity gates, legacy lint adoption, Prettier, and lint-staged guidance.
 - Read `references/storybook.md` when adding or changing UI components/pages, Storybook setup, visual/a11y/interaction test coverage, Storybook decorators, MSW handlers, or shared Storybook harnesses.
 - Read `references/documentation-templates.md` when creating feature documentation, changelogs, API docs, component docs, or troubleshooting guides.
 - Read `references/project-checklist-and-migration.md` for new-project setup checklists, additional resources, gradual migration phases, and implementation tips.

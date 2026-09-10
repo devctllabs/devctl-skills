@@ -49,6 +49,23 @@ Behavior-preserving simplification for a current change, complex function, secti
 - Private-structure refactoring under a frozen behavior oracle
 - Safe migration away from implementation-coupled tests
 
+### devctl-code-review
+
+Evidence-based, read-only merge-readiness review for a scoped change.
+
+**Use when:**
+
+- Reviewing a staged diff, commit, commit interval, branch, or pull request
+- Checking a change against requirements and repository standards
+- Looking for engineering defects or architectural risks before merge
+
+**Covers:**
+
+- Explicit scope resolution with wider caller, test, and configuration context
+- Independent Spec, Engineering, and Architecture review lanes with a portable fallback
+- Evidence-backed HIGH, MEDIUM, and LOW findings
+- Deterministic APPROVE, COMMENT, or REQUEST CHANGES verdicts
+
 ### devctl
 
 The entrypoint for Devctl-managed projects, manifests, CLI workflows, and
@@ -299,6 +316,7 @@ Use $devctl-react-vite to organize a React + Vite TypeScript application.
 Use $devctl-obsidian-react to build a lifecycle-safe Obsidian plugin with React surfaces.
 Use $outside-in-tdd to grow a behavior through scenario-sized TDD cycles.
 Use $simplify-code to reduce cognitive complexity without changing public behavior.
+Use $devctl-code-review to review a staged diff, commit, branch, or pull request before merge.
 ```
 
 Skills use progressive disclosure: start with `SKILL.md`, then load only the
