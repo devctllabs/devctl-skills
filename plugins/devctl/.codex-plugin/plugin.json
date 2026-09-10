@@ -1,7 +1,7 @@
 {
   "name": "devctl",
   "version": "0.1.0",
-  "description": "Composable architecture, documentation, TDD, and delivery guidance for software projects.",
+  "description": "Composable architecture, documentation, review, TDD, and delivery guidance for software projects.",
   "author": {
     "name": "Devctl Labs",
     "url": "https://github.com/devctllabs"
@@ -22,18 +22,20 @@
     "plugins",
     "vite",
     "tdd",
-    "refactoring"
+    "refactoring",
+    "code-review"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Devctl",
     "shortDescription": "Build and document consistent software systems.",
-    "longDescription": "Devctl provides composable project-shaping, product and system documentation, contract-design, backend, frontend, Obsidian plugin, outside-in TDD, and behavior-preserving simplification skills.",
+    "longDescription": "Devctl provides composable project-shaping, product and system documentation, code review, contract-design, backend, frontend, Obsidian plugin, outside-in TDD, and behavior-preserving simplification skills.",
     "developerName": "Devctl Labs",
     "category": "Productivity",
     "capabilities": [
       "Project architecture",
       "Product and system documentation",
+      "Evidence-based code review",
       "API contract design",
       "Obsidian plugin architecture",
       "Outside-in TDD",
@@ -43,7 +45,7 @@
     "defaultPrompt": [
       "Create a Devctl project manifest for this repository.",
       "Establish or reconcile this project's product and architecture documentation.",
-      "Review this project using the matching Devctl skill.",
+      "Review a staged diff, commit, or pull request for requirements, engineering, and architecture risks.",
       "Design a Devctl-managed service and its API contract.",
       "Build an Obsidian plugin with React surfaces and lifecycle-safe tests."
     ]

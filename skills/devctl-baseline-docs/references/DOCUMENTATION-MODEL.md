@@ -4,9 +4,9 @@ The baseline separates current truth from decision history:
 
 ```text
 docs/product/            WHAT the product does now
-docs/product/decisions/  WHY significant product behavior was chosen
+docs/product/decisions/  WHY THIS WHAT — why significant product behavior was chosen
 docs/architecture/       HOW the system works now
-docs/adr/                WHY significant technical architecture was chosen
+docs/adr/                WHY THIS HOW — why significant technical architecture was chosen
 ```
 
 `CONTEXT.md` remains a domain glossary. It contains no product requirements or implementation

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Devctl Code Review"
+  short_description: "Evidence-based review of scoped changes"
+  default_prompt: "Use $devctl-code-review to review the staged diff for requirements, engineering, and architecture risks."

@@ -43,6 +43,9 @@ Remain in this state machine for each scenario:
 TEST -> useful RED or natural GREEN -> minimum production -> GREEN -> SIMPLIFY -> GREEN
 ```
 
+Exercise behavior through the owner's caller-visible interface. Derive expected results
+independently of the production algorithm.
+
 1. Change the owner test first. Add only a non-behavioral declaration or compile/import skeleton
    when the test cannot otherwise run. Complete the step on a useful RED caused by missing or wrong
    requested behavior, never unrelated syntax, import, collection, fixture, dependency, or
@@ -60,8 +63,10 @@ TEST -> useful RED or natural GREEN -> minimum production -> GREEN -> SIMPLIFY -
    behavior introduced a concrete consumer-owned contract that demands a lower implementation.
 
 An upper RED may demand a narrow consumer-owned interface and test double, never speculative lower
-production. Let the active language or framework skill define its concrete test layout, doubles,
-integration boundaries, and commands.
+production. Place test doubles only at consumer-owned ports or external system boundaries; treat
+internal structure and call choreography as implementation details unless they are themselves an
+observable contract. Let the active language or framework skill define its concrete test layout,
+doubles, integration boundaries, and commands.
 
 ## Recover and Finish
 

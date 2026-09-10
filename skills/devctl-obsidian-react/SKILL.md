@@ -18,7 +18,7 @@ Build Obsidian plugins as small host integrations with explicit lifecycle owners
    - Read `references/state-settings-and-i18n.md` for subscriptions, shared state, settings persistence or migration, forms, validation, or localization.
    - Read `references/testing.md` when adding or changing behavior, tests, test doubles, real-Obsidian E2E, or CI test coverage.
    - Read `references/storybook.md` when adding or changing React UI, stories, Storybook setup, visual states, interaction coverage, or shared Storybook harnesses.
-   - Read `references/tooling-development-and-release.md` for new projects, build configuration, local vault workflows, manifests, versioning, CI, packaging, or releases.
+   - Read `references/tooling-development-and-release.md` for new projects, lint or complexity tooling, build configuration, local vault workflows, manifests, versioning, CI, packaging, or releases.
 5. For a feature, bug fix, public-contract change, or behavior-preserving refactor, compose with `$outside-in-tdd` when it is available; otherwise preserve the repository's established test-first loop. Keep Obsidian adapters thin enough that most behavior reaches green without a full host mock. Finish when the changed behavior has evidence at the lowest trustworthy layer and host integration risk is covered in real Obsidian.
 6. Run the repository's complete relevant checks. For a new project, require lint, typecheck, unit/component tests, a production plugin build, and an isolated-vault Obsidian smoke test; when the plugin has React UI, also require Storybook tests and build. Finish only when the release bundle contains the intended `main.js`, `manifest.json`, and optional `styles.css`, and unload/reload leaves no duplicate registrations or live resources.
 
