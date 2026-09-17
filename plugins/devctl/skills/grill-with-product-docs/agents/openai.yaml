@@ -1,0 +1,7 @@
+interface:
+  display_name: "Grill with Product Docs"
+  short_description: "Shape a project or feature with durable decisions"
+  default_prompt: "Use $grill-with-product-docs to sharpen this project or feature and capture its domain and product decisions."
+
+policy:
+  allow_implicit_invocation: false

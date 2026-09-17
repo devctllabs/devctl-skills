@@ -68,61 +68,66 @@ Evidence-based, read-only merge-readiness review for a scoped change.
 
 ### devctl
 
-The entrypoint for Devctl-managed projects, manifests, CLI workflows, and
-implementation-skill routing.
+The entrypoint for Devctl-managed Go projects, manifests, and explicit CLI workflows.
 
 **Use when:**
 
 - Interviewing for a new project's shape
 - Creating or updating `devctl.yaml`
 - Running Devctl initialization, synchronization, linting, or generation
-- Choosing the language, frontend, or contract skill for follow-up work
+- Handing OpenAPI or handwritten Go work to its owning skill
 
 **Covers:**
 
 - Project and component discovery
 - Declarative manifests and environment configuration
 - Safe CLI workflows for `validate`, `inspect`, `sync`, `lint`, and `gen`
-- Routing to the matching `devctl-*` skill
+- Clear manifest, contract, generated, and handwritten ownership
 
-### devctl-baseline-docs
+### grill-with-product-docs
 
-An explicit-only discovery workflow for establishing accepted product and technical context in an
-existing repository.
+An explicit-only interview facade that composes Matt Pocock's grilling and domain modeling with
+Devctl product modeling.
 
 **Use when:**
 
-- Performing a project's initial technical and domain discovery
-- Establishing current product and architecture docs, `CONTEXT.md`, PDRs, and ADRs
-- Resolving repository ambiguities with the project owner before documenting them
+- Shaping a new project as its first product initiative
+- Resolving a feature's product, domain, and design decisions
+- Returning to an interview after product or design feedback
 
 **Covers:**
 
-- Evidence-led coverage of every subsystem, boundary, integration, and critical flow
-- Owner interviews with explicit resolution or deferral of ambiguities
-- One approval gate before writing current docs, confirmed glossary terms, PDRs, and ADRs
+- One invocation for `grilling`, `domain-modeling`, and `product-modeling`
+- Glossary, ADR, product-decision, PDR, and deferred-question capture
+- A clear handoff to `to-system-design` or directly to `to-spec`
 
 ### product-modeling
 
-An automatically available discipline for sharpening product behavior and recording only
-significant accepted Product Decision Records.
+An automatically available discipline for sharpening product behavior, maintaining product
+documentation policy, and recording only significant accepted Product Decision Records.
 
 **Covers:**
 
 - Concrete product scenarios, business rules, constraints, and decision authority
 - Separation of current behavior, proposed behavior, and open product questions
 - Strict PDR qualification and sequential `docs/product/decisions/` records
+- Lazy tracker artifacts for product decisions that need later thought or external approval
 
-### product-questions
+### sync-docs
 
-An explicit-only companion to feature interviews that maintains product questions and faithful
-answers in the configured issue tracker.
+An explicit-only workflow that synchronizes durable documentation with an implemented system.
+
+**Use when:**
+
+- Establishing the first complete documentation baseline for an existing project
+- Reconciling one implemented feature, branch, commit, or reviewed change
+- Resolving drift between implementation and accepted decisions before updating current truth
 
 **Covers:**
 
-- One question artifact per feature with stable `PQ-NNN` identifiers
-- Blocking branches, optional team proposals, and free-form product responses
-- In-place updates and tracker closure after every question is answered
+- Full and delta synchronization scopes inferred from the request
+- Product, architecture, glossary, PDR, ADR, and index updates behind one approval gate
+- System Design transition from Accepted to Implemented
 
 ### to-system-design
 
@@ -135,39 +140,28 @@ planning.
 - Proposed, Accepted, and Implemented lifecycle states
 - Review feedback updates in place and explicit handoff to `to-spec`
 
-### reconcile-docs
-
-An explicit-only post-implementation workflow for reconciling actual behavior with durable current
-documentation.
-
-**Covers:**
-
-- Product, architecture, glossary, PDR, and ADR impact discovery
-- Drift detection before promoting implementation as current truth
-- System Design implementation links and current-doc updates
-
 ### devctl-go
 
-Go architecture guidance for services, reusable libraries, packages, and
-multi-library monorepos.
+Compact Go architecture and development guidance for services, CLIs, reusable libraries, and
+monorepos.
 
 **Use when:**
 
 - Creating, organizing, refactoring, or reviewing Go projects
-- Designing package APIs, services, use cases, repositories, or clients
-- Adding transport adapters, dependency wiring, configuration, or migrations
-- Establishing tests, observability, deployment packaging, or quality tooling
+- Designing domain, service, use-case, repository, client, or delivery boundaries
+- Adding CLI commands, dependency wiring, configuration, lifecycle, or migrations
+- Establishing tests, generation, observability, packaging, or quality tooling
 
 **Covers:**
 
-- Inward dependency boundaries and consumer-owned interfaces
-- Domain, service, use-case, repository, client, platform, and transport layers
-- Outside-in TDD, gomock/mockgen, and Go-native verification
-- Runtime lifecycle, generated code, monorepos, Docker, Helm, and Kubernetes
+- Meaning-owned policy, inward dependencies, and consumer-owned capability seams
+- Concrete repositories, clients, transports, protocol mapping, and access boundaries
+- Outside-in TDD, gomock/mockgen, Go-native verification, and generated-contract ownership
+- CLI, DI, runtime lifecycle, go-libs integration, monorepos, Docker, Helm, and Kubernetes
 
 ### devctl-openapi
 
-OpenAPI 3.1 contract guidance for compact, downstream-friendly API schemas.
+Toolchain-agnostic OpenAPI 3.1 contract design with a strict Devctl house style.
 
 **Use when:**
 
@@ -178,7 +172,7 @@ OpenAPI 3.1 contract guidance for compact, downstream-friendly API schemas.
 
 **Covers:**
 
-- Root contracts with domain files and shared components
+- Scale-adaptive single-file and domain-split contracts
 - Strict object schemas, identifiers, timestamps, enums, and examples
 - Operation IDs, request bodies, responses, and status conventions
 - Problem details, facts-based validation errors, and localized-string boundaries
@@ -261,22 +255,22 @@ CLIs, workers, and Tauri applications.
 
 ## Product and System Documentation Workflow
 
-Use the documentation workflow to establish an existing repository's baseline, review feature
-designs before implementation planning, and reconcile current docs after delivery.
+Use the documentation workflow to shape a project or feature, optionally review its System Design,
+and synchronize current docs after delivery. A new project follows the feature flow as its first
+initiative; an undocumented existing project starts with a full `$sync-docs` run.
 
 ```text
-$devctl-baseline-docs
-→ $grill-with-docs + $product-questions
-→ $to-system-design
+$grill-with-product-docs
+→ [$to-system-design]
 → $to-spec
 → $to-tickets
 → implementation
-→ $reconcile-docs
+→ $sync-docs
 ```
 
-`product-modeling` activates automatically when product behavior is discussed. See the
-[Product and System Documentation Workflow](docs/documentation-workflow.md) for prerequisites,
-standard prompts, optional paths, and feedback loops.
+Run `$setup-matt-pocock-skills` once before the first publishing workflow. See the
+[Product and System Documentation Workflow](docs/documentation-workflow.md) for the existing
+project on-ramp, standard prompts, optional paths, and feedback loops.
 
 ## Install the Codex Plugin
 
@@ -306,12 +300,11 @@ Invoke a skill explicitly when needed:
 
 ```text
 Use $pragmatic-work to keep this task simple, focused, and well-structured.
-Use $devctl-baseline-docs to establish this repository's accepted product and technical documentation baseline.
-Use $product-questions alongside a feature interview to capture questions that need product input.
+Use $grill-with-product-docs to shape a new project or feature and capture its durable decisions.
+Use $sync-docs to establish an existing project's documentation baseline or reconcile an implemented change.
 Use $to-system-design to publish an agreed feature design for review before running $to-spec.
-Use $reconcile-docs after implementation to align current product and architecture docs with the actual change.
 Use $devctl to create a project manifest and choose the implementation skill.
-Use $devctl-openapi to add a resource domain to an OpenAPI 3.1 contract.
+Use $devctl-openapi to design or extend an OpenAPI 3.1 contract without assuming a generator.
 Use $devctl-react-vite to organize a React + Vite TypeScript application.
 Use $devctl-obsidian-react to build a lifecycle-safe Obsidian plugin with React surfaces.
 Use $outside-in-tdd to grow a behavior through scenario-sized TDD cycles.
@@ -354,6 +347,11 @@ skills/
 
 Skills can also include scripts and assets when deterministic helpers or
 reusable files are useful.
+
+## Skill Verification
+
+Reusable behavior scenarios and minimal fixtures live under [evals/](evals/README.md).
+Use `skill-creator-evals` to select and execute the cases relevant to a skill change.
 
 ## License
 

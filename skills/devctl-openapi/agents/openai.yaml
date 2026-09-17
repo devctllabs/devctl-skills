@@ -1,4 +1,4 @@
 interface:
   display_name: "Devctl OpenAPI"
-  short_description: "Author OpenAPI 3.1 contracts"
-  default_prompt: "Use $devctl-openapi to add a new resource domain to this OpenAPI 3.1 contract."
+  short_description: "Design strict OpenAPI 3.1 contracts"
+  default_prompt: "Use $devctl-openapi to design or extend this OpenAPI 3.1 contract while preserving its structure and project tooling constraints."

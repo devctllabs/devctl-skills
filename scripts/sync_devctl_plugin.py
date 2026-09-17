@@ -15,11 +15,11 @@ SOURCE_ROOT = REPOSITORY_ROOT / "skills"
 TARGET_ROOT = REPOSITORY_ROOT / "plugins" / "devctl" / "skills"
 SHARED_SKILL_NAMES = frozenset(
     {
+        "grill-with-product-docs",
         "outside-in-tdd",
         "product-modeling",
-        "product-questions",
-        "reconcile-docs",
         "simplify-code",
+        "sync-docs",
         "to-system-design",
     }
 )

@@ -1,46 +1,54 @@
 ---
 name: devctl
-description: Use when interviewing for project shape, creating or updating devctl.yaml manifests, using the devctl CLI for project initialization, component enablement, source synchronization, contract linting, scaffold/code generation, generated-code refreshes, or routing work to Devctl language and contract skills such as devctl-go, devctl-rust, devctl-openapi, devctl-react-vite, devctl-obsidian-react, or future devctl-python.
+description: "Use for Devctl Go project manifests and CLI workflows: shaping or editing devctl.yaml, initializing or scaffolding projects, managing components and contract sources, validating or inspecting effective configuration, synchronizing or linting contracts, and generating managed outputs."
 ---
 
 # Devctl
 
-Use this skill as the entrypoint for Devctl-managed projects. It owns the manifest, the CLI workflow, and routing to implementation skills.
+Own the `devctl.yaml` manifest and explicit Devctl CLI workflow for Go projects. Contract content
+and handwritten implementation belong to the relevant contract or Go skill.
 
 ## Workflow
 
-1. Inspect the repo before asking questions: `devctl.yaml`, project language, contracts, generated directories, scripts, package/module files, existing commands, and current conventions.
-2. Classify the task:
-   - manifest-only: create, review, or update `devctl.yaml`;
-   - CLI-assisted workflow: use `devctl` to initialize, enable components, add consumers/producers/clients/sources, synchronize sources, lint contracts, or run code generation;
-   - implementation routing: prepare manifest/codegen context, then use a language or contract skill.
-3. Ask only for missing decisions that materially affect the manifest or generation. Use `references/interview.md` for the question set.
-4. Author or update `devctl.yaml` using `references/devctl-yaml.md`. Keep it declarative: project shape, components, env, sources, language settings, and generator settings.
-5. Use `references/cli.md` before running `devctl`. If the CLI is unavailable, edit `devctl.yaml` directly and state that generation was not run.
-6. Route follow-up implementation with `references/routing.md`. Load only the target subskill references needed for that implementation.
-7. When the CLI is available, use `devctl validate` for manifest validation, `devctl inspect` for resolved defaults, `devctl sync` for external source materialization, `devctl lint` for contract lint, and `devctl gen` for generated outputs. Use best-effort YAML/repo checks only when the CLI is unavailable, and state that CLI validation was not run. Do not hand-edit generated files unless the user explicitly asks for a temporary patch.
+1. Inspect `devctl.yaml`, Go module files, contracts, generated boundaries, project tasks, and local
+   conventions. Check `command -v devctl` and relevant `devctl <command> --help` before relying on
+   command syntax. The fact set is complete when the project root, manifest, requested target, and
+   available tooling are known.
+2. Classify the work as manifest authoring, manifest mutation, scaffold, source synchronization,
+   contract lint, generation, or implementation handoff. Read only the references for that branch.
+3. Ask only for decisions that cannot be derived from the repo or CLI. For incomplete project
+   requirements, use `references/interview.md`.
+4. Use the CLI for initialization, standard mutations, validation, inspection, synchronization,
+   linting, scaffolding, and generation when its help confirms the operation. Use a direct YAML edit
+   for a surgical manifest change or a field without CLI mutation support.
+5. Keep workflows explicit. Manifest mutation, scaffold, sync, lint, and generation are separate
+   operations; run only those the user requested or that are necessary to verify the requested
+   change. Preview publication or pruning with `--dry-run` when available.
+6. Validate manifest changes with `devctl validate` and inspect effective defaults with
+   `devctl inspect`. If the CLI is unavailable, perform a best-effort YAML/repo review and report
+   the missing validation rather than imitating the CLI.
+7. Route OpenAPI content to `$devctl-openapi` and handwritten Go to `$devctl-go`. Return here only
+   for manifest wiring or CLI operations. Completion requires every requested operation to be run
+   or explicitly reported as skipped, with managed and handwritten changes distinguished.
 
 ## References
 
-- Read `references/interview.md` when requirements are incomplete or the task asks to bootstrap/design a project.
-- Read `references/devctl-yaml.md` when creating, reviewing, or editing `devctl.yaml`.
-- Read `references/cli.md` before running `devctl` commands or deciding whether to edit YAML directly.
-- Read `references/grpc-contract-naming.md` when naming or linting local gRPC contracts.
-- Read `references/kafka-contract-naming.md` when naming or linting Kafka topics and schemas.
-- Read `references/routing.md` when delegating work to language, frontend, or contract skills.
-- Read `references/examples.md` when a concrete manifest or workflow example would reduce ambiguity.
+- Read `references/devctl-yaml.md` when creating, reviewing, or directly editing `devctl.yaml`.
+- Read `references/cli.md` before executing Devctl commands.
+- Read `references/interview.md` when project-shape decisions are missing.
+- Read `references/routing.md` when the task crosses manifest, contract, generated, and handwritten
+  ownership boundaries.
+- Read `references/grpc-contract-naming.md` or `references/kafka-contract-naming.md` only for the
+  matching contract family.
+- Read `references/examples.md` only when a minimal concrete workflow resolves ambiguity.
 
-## Default Decisions
+## Invariants
 
-- Do not create a separate `devctl-yaml` skill. Manifest authoring belongs here.
-- Treat built-in defaults as an autonomous working mirror of Devctl behavior. If an existing `devctl.yaml`, repo convention, local `devctl` CLI help, or generated output conflicts with this skill, prefer the local repo/CLI behavior and preserve or make the differing value explicit.
-- Prefer a direct `devctl.yaml` edit when the user asks for a precise manifest diff or when the CLI is unavailable.
-- Prefer CLI commands when initializing a new project, enabling standard components, adding Kafka consumers/producers, synchronizing external sources, linting contracts, or regenerating managed artifacts and the command behavior is confirmed.
-- Treat the v1 CLI surface as `init`, `validate`, `inspect`, `enable`, `add`, `sync`, `gen`, and `lint`.
-- Treat `devctl validate`, `devctl inspect`, `devctl sync`, `devctl gen`, and `devctl lint` as the authoritative workflow for manifest validation, resolved defaults, source materialization, generated outputs, and contract lint. This skill documents the expected CLI contract; it does not replace the CLI validator/generator/linter.
-- Treat `devctl.yaml` as the project manifest for architecture, environment, runtime activation, and generator settings. Proto, OpenAPI, and JSON Schema files still define API/message contract content.
-- Treat `.mise.toml` as the standard project-local toolchain and task surface for Devctl-scaffolded projects. Repos own future tool version updates after scaffold; generation should preflight tools and fail with `mise install` guidance instead of installing tools implicitly.
-- Keep DB migrations on each SQLite/PostgreSQL variant. Devctl owns their directories and `.mise.toml` golang-migrate tasks, but never applies migrations or adds the migration CLI to application runtime dependencies.
-- Model Redis as named `connections[]` with `addr_env` and optional credential-free `addr_default`; there is no default/primary Redis connection flag.
-- Keep generated outputs under configured generator paths or existing generated directories. Do not hand-edit generated outputs.
-- For unsupported language skills, stop after manifest/CLI work and explain that handwritten implementation guidance needs a dedicated language skill.
+- The local repository and installed CLI outrank this skill's working reference.
+- Devctl v1 supports Go projects. Do not author Python or Rust manifest sections.
+- `devctl.yaml` declares desired project shape; OpenAPI, Proto, and JSON Schema files declare
+  protocol content.
+- Project-owned tool versions and task commands live outside the manifest.
+- Generated outputs stay under their configured managed paths and are regenerated rather than
+  hand-edited.
+- Devctl never applies database migrations.

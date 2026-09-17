@@ -1,36 +1,55 @@
 ---
 name: devctl-openapi
-description: Use when creating, extending, or reviewing OpenAPI 3.1 contracts and YAML schema trees, including API paths, operations, request/response schemas, shared components, problem details, discriminated unions, or domain-split OpenAPI files in a downstream-friendly structure.
+description: Use when designing, creating, extending, or reviewing OpenAPI 3.1 contracts, including single-file or domain-split YAML, paths and operations, strict request/response schemas, problem details, discriminated unions, and downstream contract compatibility.
 ---
 
 # Devctl OpenAPI
 
-Use this skill to author OpenAPI 3.1 contracts with a compact, reusable structure: one root contract, domain files for resource-specific paths and schemas, and shared components for cross-cutting parameters, primitive schemas, and error responses.
+Design, modify, review, and validate handwritten OpenAPI contracts: their protocol semantics, house
+style, file organization, and references.
 
 ## Workflow
 
-1. Inspect the existing OpenAPI files, package scripts, and generated-code boundaries before editing. Preserve the local file layout and naming when it is coherent.
-2. If the project has no coherent OpenAPI layout, use a root contract that references domain files and shared components rather than placing every path and schema in one file.
-3. Model the API contract first: resources, path hierarchy, operations, request bodies, success responses, error responses, and schema ownership.
-4. Keep object schemas strict and explicit: `type: object`, `additionalProperties: false`, complete `required`, stable property names, and reusable `$ref` entries for repeated concepts.
-5. Use `$devctl` when OpenAPI files must be wired into `devctl.yaml`, sources/components must be updated, or Devctl CLI generation must run. This skill owns OpenAPI contract content.
-6. Validate authoring quality with YAML/OpenAPI checks and manual review. Do not update generated clients, mock runtime output, or codegen drift unless the user explicitly asks.
+1. Inspect the contract entrypoint, all referenced files, existing layout, and local conventions.
+   When changing topology, `$ref` values, or public schemas, also inspect project validation
+   commands and relevant bundler or generator configuration. Preserve a coherent existing topology
+   unless the user explicitly requests reorganization.
+2. For a new contract, choose topology by scale: keep one bounded resource domain in one file; use a
+   small root plus domain files when two or more independently evolving domains exist. Extract
+   shared components only when they are reused across domains.
+3. Model resources, path hierarchy, operations, request bodies, success responses, error responses,
+   and schema ownership before authoring details.
+4. Apply the Devctl house style to new contract surfaces. Preserve a different coherent local style
+   during ordinary edits; normalize it only when the user requests a migration.
+5. Treat relevant project tooling as a compatibility constraint on the contract. If the intended
+   contract shape conflicts with a discovered constraint, surface the concrete conflict before
+   changing the contract.
+6. Validate the complete contract with the project's existing OpenAPI command when available and
+   resolve every local and cross-file `$ref` from the file that contains it. Report checks that
+   could not run. Completion requires the requested contract behavior, references, examples,
+   discriminator mappings, and relevant consumer constraints to be accounted for.
 
 ## References
 
-- Read `references/structure.md` for root contract shape, domain file split, shared components, and `$ref` conventions.
-- Read `references/schemas.md` for strict object schemas, identifiers, timestamps, enums, nullable values, and examples.
-- Read `references/operations.md` for paths, HTTP methods, `operationId`, request bodies, success responses, and response status conventions.
-- Read `references/errors.md` for reusable `application/problem+json` responses, validation issue contracts, and localized-string boundaries.
-- Read `references/polymorphism.md` for `oneOf` plus discriminator patterns and variant schema rules.
-- Read `references/review-checklist.md` before finishing contract edits.
+- Read `references/structure.md` when creating a contract, choosing topology, reorganizing files,
+  or changing cross-file references.
+- Read `references/schemas.md` when adding or changing component schemas.
+- Read `references/operations.md` when adding or changing paths and operations.
+- Read `references/errors.md` when defining or changing error responses.
+- Read `references/polymorphism.md` for variant schemas.
+- Read `references/review-checklist.md` before finishing contract work.
 
-## Default Decisions
+## House style
 
-- Prefer OpenAPI `3.1.0` with JSON Schema 2020-12 when starting a new contract.
-- Prefer YAML for hand-authored contracts.
-- Prefer `$ref` for reusable parameters, shared primitives, request bodies, response bodies, and public domain schemas.
-- Prefer domain file names by resource area, such as `workspaces.yaml`, `orders.yaml`, or `billing.yaml`.
-- Prefer stable, verb-led `operationId` values such as `listWorkspaces`, `createWorkspace`, `getWorkspace`, `updateWorkspace`, and `deleteWorkspace`.
-- Prefer facts-based validation errors (`issues[]` with `path`, `code`, and optional `params`) over user-language backend strings.
-- Keep generated code out of scope for this skill unless the user asks for codegen work.
+For new contract surfaces:
+
+- Use OpenAPI `3.1.0`, JSON Schema 2020-12 semantics, and YAML.
+- Use strict object DTOs with explicit properties, complete `required`, and
+  `additionalProperties: false`.
+- Use named schemas and `$ref` for reused or public request and response shapes.
+- Use stable verb-led `operationId` values.
+- Use the exact Problem Details family in `references/errors.md`, including stable
+  `ProblemType`, `retryable`, entity facts, discriminators, and fact-based validation issues.
+- Add `servers`, `security`, and `tags` when the API requires them; they are not empty
+  boilerplate.
+- Keep localized UI copy out of protocol facts.

@@ -1,4 +1,0 @@
-description: Approved sample-review behavior contract
-
-tests:
-  - file://cases/*.yaml

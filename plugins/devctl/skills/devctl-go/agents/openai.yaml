@@ -1,4 +1,4 @@
 interface:
   display_name: "Devctl Go"
-  short_description: "Go services, libraries, monorepos"
-  default_prompt: "Use $devctl-go to preserve Go ownership and conventions, composing $outside-in-tdd for handwritten production behavior."
+  short_description: "Compact Go architecture and development"
+  default_prompt: "Use $devctl-go to organize Go behavior, adapters, CLI, and runtime with the shared outside-in development process."

@@ -1,1 +1,0 @@
-"""Hotspot application fixture."""

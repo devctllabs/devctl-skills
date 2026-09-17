@@ -41,7 +41,7 @@ Add E2E scenarios for command availability, view restoration, settings persisten
 
 ## CI Gate
 
-Run lint, typecheck, unit/component tests, the production plugin build, and desktop E2E smoke on pull requests. When the plugin has Storybook, also run its browser tests, accessibility checks, and static build. Run broader Obsidian-version and mobile matrices on release or a scheduled workflow according to feature risk.
+On pull requests, run the complete gate required by `SKILL.md` and the Storybook checks defined in `storybook.md`. Run broader Obsidian-version and mobile matrices on release or a scheduled workflow according to feature risk.
 
 References:
 
