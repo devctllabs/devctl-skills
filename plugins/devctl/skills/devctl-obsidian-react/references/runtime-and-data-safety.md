@@ -46,7 +46,6 @@ Place Node.js, Electron, `FileSystemAdapter`, subprocess, and unrestricted files
 - Keep dependencies few, locked, and reviewed for runtime behavior.
 - Keep telemetry out of plugin code. Treat vault content, file names, settings, and commands as sensitive data.
 - Request network or account actions only for the advertised feature and document network use, authentication, payments, external file access, closed source, and other required disclosures.
-- Keep secrets out of settings defaults, logs, fixtures, Storybook stories, and release artifacts.
 - Remove diagnostic logging from production paths; route actionable failures to the owning UI surface.
 
 ## Performance

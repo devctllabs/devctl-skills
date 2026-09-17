@@ -1,0 +1,7 @@
+interface:
+  display_name: "Sync Docs"
+  short_description: "Align durable docs with the implemented system"
+  default_prompt: "Use $sync-docs to synchronize this implemented system or delivered change with its durable documentation."
+
+policy:
+  allow_implicit_invocation: false

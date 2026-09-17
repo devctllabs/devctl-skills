@@ -1,8 +1,13 @@
 # Product Decision Record format
 
-PDRs live in `docs/product/decisions/` and use numbering independent from ADRs:
-`0001-<slug>.md`, `0002-<slug>.md`, and so on. Scan the directory for the highest existing number
-and increment it. Create the directory only for the first qualifying decision.
+Use the PDR directory defined in [PRODUCT-DOCS.md](PRODUCT-DOCS.md). Create the directory only
+for the first qualifying decision.
+
+## Numbering
+
+Number PDRs sequentially and independently from ADRs, starting at `0001` and padding numbers
+with leading zeros to four digits: `0001-<slug>.md`, `0002-<slug>.md`, and so on. Scan the PDR
+directory for the highest existing number and increment it by one.
 
 ## Required form
 

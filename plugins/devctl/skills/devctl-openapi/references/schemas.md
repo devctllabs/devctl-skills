@@ -4,7 +4,8 @@ Use this reference when authoring component schemas.
 
 ## Strict Object Shape
 
-For contract DTOs, prefer explicit closed objects:
+For new Devctl-style contract DTOs, use explicit closed objects. Preserve a different coherent
+existing convention during ordinary edits unless the user requests normalization:
 
 ```yaml
 Workspace:

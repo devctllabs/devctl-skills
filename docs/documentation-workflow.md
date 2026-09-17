@@ -1,187 +1,152 @@
 # Product and System Documentation Workflow
 
-This guide explains how to use the Devctl documentation skills with Matt Pocock's engineering
-skills. The workflow keeps current product and architecture documentation separate from decision
-history and from temporary feature-planning artifacts.
+This workflow composes Devctl documentation skills with Matt Pocock's engineering primitives. It
+keeps planning artifacts separate from implemented truth while giving the user one interview
+entrypoint and one synchronization entrypoint.
 
-## Prerequisites
+## Setup once
 
-Install the Devctl skills and the following skills from
+Install the Devctl skills and these skills from
 [`mattpocock/skills`](https://github.com/mattpocock/skills):
 
 - `setup-matt-pocock-skills`
-- `grill-with-docs`
+- `grilling`
+- `domain-modeling`
 - `to-spec`
 - `to-tickets`
 
-Before publishing feature artifacts, configure the repository's issue tracker and domain-document
-layout:
+Configure the repository before the first workflow that publishes an artifact:
 
 ```text
 Use $setup-matt-pocock-skills to configure this repository for the engineering workflow.
 ```
 
-The configured tracker owns planning artifacts. Depending on the project configuration, an
-artifact may be a GitHub or GitLab issue, a local Markdown file, or an item in another tracker.
+Setup records the issue tracker and the single- or multi-context domain-document layout. If a
+publishing skill cannot find that configuration, it stops before publication, gives this exact
+handoff, and resumes its current phase after setup.
 
-## Documentation model
+## Ownership
 
-The durable repository documentation has four responsibilities:
+Each durable concern has one owner:
 
-```text
-docs/
-|-- README.md
-|-- product/
-|   |-- README.md
-|   |-- <capability>.md
-|   `-- decisions/
-|       `-- NNNN-<slug>.md
-|-- architecture/
-|   |-- overview.md
-|   |-- data-flow.md       optional
-|   `-- deployment.md      optional
-`-- adr/
-    `-- NNNN-<slug>.md
-```
+| Concern | Owner |
+|---|---|
+| Interview strategy and design frontier | `$grilling` |
+| Domain glossary and ADRs | `$domain-modeling` plus `docs/agents/domain.md` |
+| Product behavior, current-product policy, PDRs, and deferred product decisions | `$product-modeling` |
+| Current documentation synchronization and architecture docs | `$sync-docs` |
+| Proposed architecture review | `$to-system-design` |
+| Implementation spec and tickets | `$to-spec` and `$to-tickets` |
 
-```text
-docs/product/            WHAT the product does now
-docs/product/decisions/  WHY THIS WHAT — why significant product behavior was chosen
-docs/architecture/       HOW the system works now
-docs/adr/                WHY THIS HOW — why significant technical architecture was chosen
-```
+Canonical references:
 
-`CONTEXT.md` remains a domain glossary. Current product and architecture documents describe the
-implemented system, not a planned future state. Product Decision Records (PDRs) and Architecture
-Decision Records (ADRs) preserve significant accepted decisions. Product questions, System
-Designs, implementation specs, and tickets live in the configured tracker.
-
-Canonical formats:
-
-- [Current documentation model](../skills/devctl-baseline-docs/references/DOCUMENTATION-MODEL.md)
+- [Product documentation model](../skills/product-modeling/references/PRODUCT-DOCS.md)
 - [PDR format](../skills/product-modeling/references/PDR-FORMAT.md)
-- [Product-question behavior](../skills/product-questions/SKILL.md)
+- [Deferred product questions](../skills/product-modeling/references/DEFERRED-QUESTIONS.md)
+- [Current documentation model](../skills/sync-docs/references/CURRENT-DOCS.md)
 - [System Design format](../skills/to-system-design/references/SYSTEM-DESIGN-FORMAT.md)
 
-## Skill responsibilities
+Current product and architecture documents describe implemented behavior. Accepted PDRs and ADRs
+preserve significant decision history. Product Questions, System Designs, specs, and tickets are
+planning artifacts in the configured tracker.
 
-| Skill                       | Use it when                                                     | Output and handoff                                                                  |
-|-----------------------------|-----------------------------------------------------------------|-------------------------------------------------------------------------------------|
-| `$setup-matt-pocock-skills` | Preparing a repository for the workflow                         | Tracker and domain-doc conventions consumed by publishing skills                    |
-| `$devctl-baseline-docs`     | Establishing an existing repository's initial accepted baseline | Current docs, `CONTEXT.md`, and qualifying PDRs/ADRs                                |
-| `$grill-with-docs`          | Resolving a feature's design tree                               | Confirmed domain terms and qualifying ADRs; shared conversation for later synthesis |
-| `$product-modeling`         | Product behavior or business rules are being discussed          | Sharpened scenarios and qualifying accepted PDRs; activates automatically           |
-| `$product-questions`        | Some product decisions may need thought or external approval    | One question-and-answer artifact for the feature                                    |
-| `$to-system-design`         | A non-trivial feature is ready for architecture review          | Proposed, then Accepted, System Design reference                                    |
-| `$to-spec`                  | Product and design decisions are accepted                       | Implementation-oriented feature spec                                                |
-| `$to-tickets`               | The implementation spec is ready to execute                     | Ordered implementation tickets                                                      |
-| `$reconcile-docs`           | The implementation is complete or under final review            | Updated current docs and an Implemented System Design                               |
+## Start a new project
 
-## Bootstrap an existing repository
-
-Run the baseline once, then rerun it only when the repository never received a complete baseline
-or its documented foundations need deliberate re-establishment.
-
-```mermaid
-flowchart TD
-    Repo["Existing repository"] --> Baseline["devctl-baseline-docs"]
-    Baseline --> Discovery["Discover code, docs, tests, config, and history"]
-    Discovery --> Interview["Grilling plus domain and product modeling"]
-    Interview --> Ready{"Ambiguities resolved or explicitly deferred?"}
-    Ready -->|No| Interview
-    Ready -->|Yes| Proposal["Review one proposed documentation change set"]
-    Proposal --> Approved{"Approved?"}
-    Approved -->|Revise| Interview
-    Approved -->|Yes| Current["Current product and architecture docs"]
-    Current --> History["CONTEXT.md plus accepted PDRs and ADRs"]
-```
+A new project is the first initiative through the feature flow; it does not need a separate
+baseline workflow. After setup, start at [Shape the project or feature](#1-shape-the-project-or-feature):
 
 ```text
-Use $devctl-baseline-docs to discover this repository and establish its accepted product and
-technical documentation baseline.
+Use $grill-with-product-docs to shape <project> as its first product initiative.
 ```
 
-The skill performs discovery and interviewing before writing. It creates only useful current-state
-documents and uses Mermaid only when a relationship, flow, state transition, or deployment
-topology is clearer visually.
+Before anything is implemented, the repository may contain confirmed glossary terms, qualifying
+ADRs or PDRs, and tracker artifacts. It has no current product or architecture behavior to
+document yet. The first delta `$sync-docs` run creates those current documents after delivery.
 
-## Plan and deliver a feature
+## Start with an existing project
 
-The standard feature flow keeps product clarification, architecture approval, implementation
-planning, and current-documentation updates as explicit handoffs.
+An implemented project without a reliable documentation baseline takes one additional on-ramp:
+
+```text
+Use $sync-docs to establish a full documentation baseline for this existing project.
+```
+
+The full sync discovers the whole implemented system, resolves or explicitly defers material
+ambiguities, presents one documentation change set, and writes only after approval. Once the
+baseline is established, every new change follows the same feature flow as a new project.
+
+## Feature flow
 
 ```mermaid
 flowchart TD
-    Start["Feature idea"] --> Interview["grill-with-docs plus product-questions"]
-    Interview --> ProductInput{"Product input needed?"}
-    ProductInput -->|Yes| Response["Collect product response"]
+    Start["Project initiative or feature"] --> Interview["grill-with-product-docs"]
+    Interview --> Deferred{"Product decision deferred?"}
+    Deferred -->|Yes| Questions["Product Questions artifact"]
+    Questions --> Response["Product response"]
     Response --> Interview
-    ProductInput -->|No| DesignUseful{"System Design useful?"}
-    DesignUseful -->|No: local change| Spec["to-spec"]
+    Deferred -->|No| DesignUseful{"Architecture review useful?"}
+    DesignUseful -->|No| Spec["to-spec"]
     DesignUseful -->|Yes| Design["to-system-design: Proposed"]
-    Design --> Review{"Design approved?"}
+    Design --> Review{"Approved?"}
     Review -->|Feedback| Interview
     Review -->|Yes| Accepted["to-system-design: Accepted"]
     Accepted --> Spec
     Spec --> Tickets["to-tickets"]
     Tickets --> Implementation["Implementation"]
-    Implementation --> Reconcile["reconcile-docs"]
-    Reconcile --> Drift{"Matches accepted decisions?"}
+    Implementation --> Sync["sync-docs: delta"]
+    Sync --> Drift{"Matches accepted decisions?"}
     Drift -->|No| Interview
-    Drift -->|Yes| Updated["Current docs updated"]
-    Updated --> Implemented["System Design: Implemented"]
+    Drift -->|Yes| Current["Current docs + Implemented design"]
 ```
 
-### 1. Interview the feature
+### 1. Shape the project or feature
 
-Attach `product-questions` at the start so it can capture a question as soon as you say that it
-needs thought or external approval. If no such question appears, it creates no artifact.
-`product-modeling` activates automatically when the conversation covers product behavior.
+`grill-with-product-docs` is a thin explicit facade over `grilling`, `domain-modeling`, and
+`product-modeling`:
 
 ```text
-Use $grill-with-docs and $product-questions to work through <feature>. Continue until every
-currently answerable branch of the design tree is resolved.
+Use $grill-with-product-docs to work through <subject> until every currently answerable branch of
+the design tree is resolved.
 ```
 
-### 2. Return product responses
+`grilling` owns which questions to ask and in what order. `product-modeling` handles product rules,
+decision authority, PDR qualification, and the boundary between proposals and current truth.
+`domain-modeling` handles canonical terms and qualifying ADRs.
 
-The product response may use any convenient format. The skill maps unambiguous answers to their
-questions, preserves them faithfully, and keeps answered questions in the feature artifact.
+When a product decision needs later thought or an external authority, `product-modeling` offers to
+create or update one Product Questions artifact for the subject. It asks for approval before the
+first tracker mutation. Ordinary interview questions are never persisted there, and only the
+dependent design branch pauses.
+
+Return a product response through the same facade:
 
 ```text
-Use $grill-with-docs and $product-questions to resume <feature> from <product-questions-ref>.
+Use $grill-with-product-docs to resume <subject> from <product-questions-ref>.
 The product response is: <response>.
 ```
 
-An open blocking question pauses only the dependent design branch; the rest of the interview can
-continue. The question artifact moves from `Open` to `Resolved` after every question is answered.
+The response is kept faithfully. If it settles the decision, `product-modeling` applies its normal
+PDR qualification and links any resulting PDR from the question artifact.
 
-### 3. Publish a System Design when useful
+At the end of the interview, the facade recommends exactly one next skill: `to-system-design` when
+architecture review is useful, or `to-spec` for a local change.
 
-A separate System Design review is recommended when the feature changes important flows,
-component boundaries, data or API contracts, integrations, deployment, or meaningful technical
-trade-offs. A small local behavior change can proceed directly to `to-spec`.
+### 2. Review system design when useful
+
+Use a System Design when the change affects important flows, component boundaries, data or API
+contracts, integrations, deployment, or meaningful technical trade-offs:
 
 ```text
-Use $to-system-design to synthesize and publish the agreed design for <feature>.
+Use $to-system-design to synthesize and publish the agreed design for <subject>.
 ```
 
-The new artifact starts as `Proposed`. The skill synthesizes confirmed decisions; when it uncovers
-a hidden decision or blocking question, return to the feature interview instead of accepting an
-assumption.
-
-### 4. Resolve design-review feedback
-
-First resolve the feedback as a design decision, then update the existing artifact rather than
-creating a second System Design.
+The artifact begins as `Proposed`. Hidden decisions and blocking questions return to
+`grill-with-product-docs`; synthesis never accepts an assumption. Review feedback follows the same
+loop, then updates the existing artifact:
 
 ```text
-Use $grill-with-docs and $product-questions to resolve this review feedback for <feature>:
-<feedback>.
-```
-
-```text
-Use $to-system-design to update <system-design-ref> with the confirmed review decisions.
+Use $grill-with-product-docs to resolve this review feedback for <subject>: <feedback>.
+Use $to-system-design to update <system-design-ref> with the confirmed decisions.
 ```
 
 After explicit approval:
@@ -191,49 +156,34 @@ Use $to-system-design to mark <system-design-ref> Accepted. The design has been 
 approved.
 ```
 
-Acceptance completes the architecture-review artifact; it does not claim the feature has already
-been implemented.
+A small local change may skip this phase and proceed directly to `to-spec`.
 
-### 5. Create the implementation spec and tickets
+### 3. Create the spec and tickets
 
-Pass the Accepted System Design explicitly so `to-spec` does not guess which feature design to
-use. For a feature that reasonably skipped System Design, pass the completed conversation instead.
+Pass an Accepted System Design explicitly when one exists; otherwise synthesize from the completed
+interview:
 
 ```text
 Use $to-spec to create the implementation spec from Accepted System Design <system-design-ref>.
-```
-
-```text
 Use $to-tickets to turn <spec-ref> into ordered implementation tickets.
 ```
 
-The System Design answers whether the architecture should be approved. The spec and tickets answer
-what an implementation agent must build and how the result will be verified.
+The System Design owns reviewable architecture. The spec and tickets own implementation behavior,
+verification, vertical slices, and blocking edges.
 
-### 6. Reconcile implemented behavior
+### 4. Synchronize delivered truth
 
-After implementation or final code review, reconcile the actual change rather than copying the
-proposal into current docs. Explicit references are helpful but optional when the current PR,
-branch, tracker links, and conversation identify one feature unambiguously.
+After implementation or final code review, run a delta synchronization against the actual change:
 
 ```text
-Use $reconcile-docs to reconcile the implemented <feature> with its current product and
-architecture documentation. Relevant references: <optional design, spec, and change refs>.
+Use $sync-docs to synchronize the implemented <subject> with its durable documentation. Relevant
+references: <optional design, spec, PR, commit, or branch refs>.
 ```
 
-If implementation materially differs from accepted decisions, return that branch to grilling and
-record any qualifying PDR or ADR before updating current truth. When implementation and decisions
-agree, `reconcile-docs` updates every affected current document and moves the System Design from
-`Accepted` to `Implemented`.
-
-## The three feedback loops
-
-1. **Product response:** give the response back to `$grill-with-docs` and `$product-questions`;
-   resume only the branches it unblocks.
-2. **Design review:** resolve feedback through grilling, then update the same System Design and
-   request approval again.
-3. **Implementation drift:** resolve whether the design or implementation should change before
-   `$reconcile-docs` promotes anything to current truth.
+`sync-docs` compares the implementation with accepted decisions, presents one change set, and
+writes only after approval. Material drift returns to `grill-with-product-docs`. Once the evidence
+and decisions agree, it updates current product, architecture, glossary, and decision documents
+and moves an Accepted System Design to `Implemented`.
 
 Product roadmaps remain in the configured tracker. This workflow does not create or maintain
 application user guides.

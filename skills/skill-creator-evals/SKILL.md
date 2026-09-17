@@ -1,64 +1,63 @@
 ---
 name: skill-creator-evals
-description: Use when creating, modifying, simplifying, or optimizing a local Codex skill with a contract-first Promptfoo suite, including requirements interviews, reusable cases, disposable fixtures, deterministic assertions, structured output, agent-rubric judges, trajectory checks, optimization measurements, approval gates, skill-creator handoff, focused failure diagnosis, and single-pass acceptance.
+description: Check a newly created or substantively changed skill with a few critical scenarios. Prepare reusable Markdown cases and verify actual behavior after edits or on request.
 ---
 
 # Skill Creator Evals
 
-Freeze executable acceptance behavior before changing a skill, then evaluate the changed skill.
+Find critical behavior failures with a small execution budget. Use after creating or substantively
+changing a skill, or when asked to verify one. Cosmetic edits and scenario maintenance alone do
+not need a behavioral run. Verify behavior from the skill's instructions; discovery, registration,
+and implicit selection are outside this skill's scope. Creating the target skill remains a separate task.
 
-## Workflow
+## Select and record
 
-1. Inspect the repository, target skill, neighboring skills, existing evals, available commands,
-   and user-owned changes.
-2. Read `references/workflow.md`, `references/eval-design.md`, and `references/promptfoo.md`
-   completely.
-3. Reuse existing cases whenever they cover the requested behavior. Update their requests,
-   fixtures, assertions, and rubrics. Add a case only for a distinct behavior that the suite does
-   not already protect.
-4. Present the complete eval contract before changing the target skill. Include every request,
-   fixture, deterministic assertion, judge rubric, trajectory requirement, side effect,
-   optimization measurement, concurrency override, and expected post-change outcome. Wait for
-   explicit approval.
-5. Treat approval as freezing requests, fixtures, assertions, and pass rules. A mechanical repair
-   may preserve the approved meaning; any semantic change requires renewed approval.
-6. Before changing the target skill, permit only read-only inspection, deterministic checks, and
-   approved optimization-baseline measurements that do not execute a candidate model eval. Do not
-   run the current skill as a candidate or create a candidate copy.
-7. Invoke `$skill-creator` to create or edit the target skill. Keep the approved eval semantics
-   fixed while changing it.
-8. Run the full suite once:
+Read the target skill, the requested change, and any saved scenarios. Select one realistic task
+that exercises its main promise; add a second or third only for a distinct consequential risk.
+For an existing skill, focus on affected behavior and reuse relevant cases.
 
-   ```text
-   node evals/<skill-name>/harness/run.mjs all [--max-concurrency <N>]
-   ```
+Before execution, save cases in `evals/<skill-name>/scenarios.md` under the working repository
+(or the user-specified location). When creating or adding cases, use the
+[scenario template](assets/scenarios-template.md) as a recommended starting point. Preserve existing
+formatting when the cases are clear. Save new cases only when they protect distinct behavior; select a relevant subset rather
+than running the entire accumulated file. Criteria must follow from the task and skill contract,
+not an assumed implementation. Preserve their meaning while evaluating the result.
 
-   Every case runs once and Promptfoo uses `--repeat 1`.
-9. Classify every failure as candidate, fixture/grader, judge variance, or runtime. Rerun only
-   failed case descriptions while repairing them. When they pass, run one final `all`.
-10. Finish with the target skill validator and repository checks requested by the user.
+## Execute and inspect
 
-## Invariants
+Budget 1–3 initial independent executions, once per selected case, plus at most one repair rerun
+for the whole verification. Skip baseline comparisons, stability repeats, and separate model judges
+by default. This bounds execution count, not elapsed time or token use; honor any tighter user budget.
 
-- Never weaken an approved eval while also changing the skill to satisfy it. Separate the changes
-  and obtain renewed approval for any semantic eval revision.
-- Stop target-skill changes and eval runs when repository evidence, explicit instructions, and the
-  approved contract do not resolve a material conflict. Present the affected cases, viable
-  decisions, tradeoffs, and a recommendation.
-- Keep the candidate unaware of hidden rubrics, graders, expected patches, and prior conclusions.
-- Permit candidate writes only inside disposable fixture workspaces. Replace external systems with
-  recording fakes or controlled local services.
-- Run the candidate without network access and the judge read-only.
-- Treat deterministic assertions as hard gates and agent judges as semantic gates.
-- Preserve raw evidence: task, response, diff, untracked files, command logs, traces, judge
-  reasons, and resolved provider metadata.
-- Do not use VIA for this workflow.
+Run sequentially through the host's native subagent capability, with a fresh context that excludes
+the supervising conversation. Use the available tool's schema to select the appropriate options.
+Use native subagents rather than launching an agent CLI from the shell. Give each executor the
+realistic request, the path to the current target `SKILL.md`, and required raw inputs. Instruct it
+to read and apply that file, and make the skill's required resources accessible; the skill need
+not be registered in the environment. Retain grading criteria, expected answers, and earlier
+conclusions in the supervising session. Executions are test tasks: they must not initiate another
+automatic skill-verification cycle.
 
-## Resources
+Use disposable workspaces for file operations, with only necessary inputs. Keep evidence outside
+the target's production files and within the task's authorized resources. If native subagents
+are unavailable, save the scenarios and report them as unrun.
 
-- `scripts/init-eval.mjs` creates a missing suite from `assets/eval-template/`.
-- `references/workflow.md` defines contract approval, skill handoff, failure diagnosis, and
-  completion.
-- `references/eval-design.md` defines case reuse, fixtures, assertions, judges, optimization
-  measurements, and safety.
-- `references/promptfoo.md` defines generated suite and runner behavior.
+Inspect actual responses, files, diffs, and relevant tool actions against the saved criteria.
+Use available deterministic checks for objective properties, and assess semantic results in the
+supervising session. An executor's claim of success is not evidence. Check required process steps
+only when they are part of the skill's essential behavior. Retain enough raw evidence to support
+the verdict, with artifact locations where useful.
+
+## Repair and finish
+
+For a clear skill defect within the authorized scope, make one narrow repair and rerun one affected
+case once in a fresh context. With multiple failures, spend that single rerun on the most consequential
+one and report the others as unresolved or unverified after the repair. Fixture or criteria defects
+are evaluation problems: explain the correction, preserve the intended requirement, and count any
+new execution against the same budget. Stop on an unclear cause or exhausted budget; a passing retry
+does not establish stability. No final full-suite rerun is required.
+
+Run the available skill validator after target-skill edits and check changed references; these
+checks do not substitute for behavior evidence. Report each selected case as passed, failed, or
+unrun, with a brief reason and evidence. Include repairs, execution count, and remaining uncertainty.
+Store reusable scenarios in the repository; ordinary run results can stay in the conversation.

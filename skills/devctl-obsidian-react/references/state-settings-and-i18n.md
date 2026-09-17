@@ -18,13 +18,13 @@ Expose host behavior through narrow services and one provider at the connected R
 
 ## Settings Persistence
 
-Treat `loadData()` as untrusted, versioned input. Define:
+Treat `loadData()` as untrusted input. Define:
 
-- a persisted shape with a schema version;
-- runtime defaults for every supported field;
-- a normalization/migration function from `unknown` to current settings;
-- serialization that writes only current, durable fields;
-- tests for empty data, the previous supported versions, invalid values, removed fields, and migration idempotence.
+- the current persisted shape and runtime defaults for every known field;
+- normalization from `unknown` input;
+- an explicit schema version and migrations when compatibility with a prior shape is required;
+- a save path that persists validated, durable settings;
+- tests for empty data, invalid known values, supported migrations, and migration idempotence.
 
 Use a small handwritten normalizer for a few primitive fields. Add Zod when settings are nested, imported/exported, externally edited, or complex enough that handwritten validation repeats schema knowledge.
 

@@ -1,10 +1,13 @@
 # Error Contracts
 
-Use this reference when defining shared API error responses.
+Use this reference when defining shared API error responses. New Devctl-style contract surfaces use
+this complete error family; preserve a different coherent existing error protocol unless the user
+requests a migration.
 
 ## Problem Details
 
-Prefer `application/problem+json` for structured errors. Shared responses should point at the public `ProblemDetails` schema:
+Use `application/problem+json` for structured errors. Shared responses point at the public
+`ProblemDetails` schema:
 
 ```yaml
 responses:

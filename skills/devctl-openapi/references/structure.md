@@ -1,89 +1,108 @@
 # Contract Structure
 
-Use this reference when creating or reorganizing an OpenAPI contract tree.
+Use this reference when creating a contract, selecting its file topology, reorganizing it, or
+changing cross-file references.
 
-## Recommended Layout
+## Preserve before reorganizing
 
-Use a small root file that owns API metadata, servers, tags, root path registration, and exported shared components:
+Treat a coherent existing single-file or multi-file layout as a project convention. Add requested
+behavior within it. Moving schemas, changing public component names, or converting topology is a
+separate migration because it can affect references and downstream consumers.
+
+Inspect relevant project validators, bundlers, and generator configuration before introducing
+external `$ref` values, moving public components, or changing public schema shapes. Tooling
+compatibility constrains a repository; it does not define the OpenAPI design rules.
+
+## Single-file contract
+
+Use one file when the API has one bounded resource domain or remains small enough to navigate as a
+whole:
+
+```yaml
+openapi: 3.1.0
+info:
+  title: Orders API
+  version: 1.0.0
+paths: {}
+components:
+  parameters: {}
+  responses: {}
+  schemas: {}
+```
+
+Keep paths under `paths` and reusable parameters, responses, and schemas under their matching
+`components` sections. Use document-local refs such as `#/components/schemas/Order`.
+
+Do not split a small contract merely to create a directory convention.
+
+## Domain-split contract
+
+Use a root plus domain files when the API contains at least two independently evolving resource
+areas:
 
 ```text
 api/openapi/
 |-- openapi.yaml
 |-- domains/
-|   |-- workspaces.yaml
-|   |-- folders.yaml
-|   `-- notes.yaml
+|   |-- orders.yaml
+|   `-- billing.yaml
 `-- shared/
     `-- components.yaml
 ```
 
-Adapt paths to the project. Preserve an existing coherent layout instead of forcing this exact tree.
+The root owns API metadata and registers public paths. Domain files own their resource-specific
+path items and schemas. Shared components contain only concepts reused across domains.
 
-## Root Contract
-
-The root contract should:
-
-- declare `openapi: 3.1.0`;
-- declare `jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema` when the project uses JSON Schema 2020-12;
-- include `info`, `servers`, `security`, and `tags`;
-- register each public path under `paths` using `$ref` to domain files;
-- re-export shared parameters, reusable responses, and public schemas under `components`.
-
-Keep the root file navigable. Do not put all domain schemas in the root unless the API is tiny.
-
-Root `components.schemas` should include public resource, result, and error schemas that external consumers or downstream tools need to find from the root contract, such as `Workspace`, `SearchResultGroup`, `Settings`, and `ProblemDetails`. Domain-private helper schemas can stay only in the domain file.
-
-## Domain Files
-
-Each domain file should own:
-
-- path item fragments under `paths`;
-- operation-local request and response schemas for that domain;
-- domain-specific enum, object, draft/input, and result schemas under `components.schemas`.
-
-Use path item names that describe the resource shape, not the literal URL, for example:
+A root path may reference a named path item in a domain file:
 
 ```yaml
 paths:
-  workspaces:
-    get: ...
-    post: ...
-  workspaceById:
-    parameters:
-      - $ref: '../shared/components.yaml#/components/parameters/WorkspaceId'
-    get: ...
-    put: ...
-    delete: ...
+  /orders:
+    $ref: './domains/orders.yaml#/paths/orders'
 ```
 
-The root file maps literal URLs to these path item fragments.
+The domain file may keep its schemas beside the operations:
 
-## Authoring Sequence
+```yaml
+paths:
+  orders:
+    get: {}
+    post: {}
+components:
+  schemas:
+    Order: {}
+    CreateOrderRequest: {}
+```
 
-When adding a new domain or resource:
+Re-export public schemas from root `components.schemas` only when external consumers or project
+tooling require root-level discoverability. Domain-private helpers stay local.
 
-1. Add or update the domain file under `domains/`.
-2. Add path item fragments under the domain file's `paths`.
-3. Add domain-owned schemas under the domain file's `components.schemas`.
-4. Register the literal URL in the root `paths` with a `$ref` to the domain path item.
-5. Add a root `tag` for the domain if it is a new operation group.
-6. Add shared path/query parameters in `shared/components.yaml` only when they are reused across operations or domains.
-7. Re-export public schemas from the root `components.schemas`; keep internal helper schemas local.
+## Shared components
 
-## Shared Components
+Move a component to `shared/components.yaml` when multiple domains use the same protocol concept,
+such as an identifier primitive, timestamp, cross-domain parameter, or common error response.
+Similarity alone is not reuse; keep domain-only concepts with their owner.
 
-Use shared components for concepts that cross domain boundaries:
+## Reference rules
 
-- path parameters such as `WorkspaceId` or `ItemId`;
-- query parameters such as sort field and sort direction;
-- primitive schemas such as `Id`, `DateTime`, and reusable enum values;
-- common error responses and problem-detail schemas.
+- Use `#/...` for references within the current document.
+- Resolve relative refs from the file that contains them, not from the process working directory.
+- Keep referenced paths inside the contract's owned tree.
+- Preserve stable component names when consumers may reference them.
+- Confirm every reference with a validator that can load the full contract tree.
+- Treat remote refs as an explicit external dependency and preserve the repository's acquisition
+  and trust policy.
 
-Avoid moving domain-only fields into shared components just because they are small.
+## Consumer constraints
 
-## Ref Conventions
+A repository may use a bundler, generator-specific import mapping, multiple generation passes, or no
+code generation. Inspect that configuration when the proposed contract change can affect it rather
+than assuming a tool.
 
-- Use local refs within a file: `#/components/schemas/Workspace`.
-- Use relative refs across files: `../shared/components.yaml#/components/schemas/Id`.
-- Re-export important public schemas from the root contract when downstream tools or external consumers need root-level access.
-- Prefer schema `$ref` in request bodies instead of inline object schemas when downstream tooling expects named schemas.
+When a proposed topology is incompatible with an existing consumer:
+
+1. Identify the exact unsupported reference or schema boundary.
+2. Preserve the compatible contract shape.
+3. Surface the constraint before proceeding with an incompatible contract change.
+
+Limit changes to handwritten OpenAPI sources.

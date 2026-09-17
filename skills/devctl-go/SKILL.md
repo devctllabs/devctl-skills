@@ -1,148 +1,113 @@
 ---
 name: devctl-go
-description: Architect Go services and libraries. Use when creating, organizing, refactoring, or reviewing Go code involving package boundaries, domain/service/usecase behavior, repositories or outbound integrations, HTTP/gRPC/Kafka/CLI delivery, dependency wiring/configuration/lifecycle, tests/tooling/generated contracts, or Go deployment and monorepo packaging.
+description: Architect Go services and libraries. Use when creating, organizing, refactoring, or reviewing Go code involving package boundaries, domain/service/usecase behavior, repositories, outbound integrations, delivery adapters, dependency wiring, runtime, tests, generated contracts, or deployment packaging.
 ---
 
 # Devctl Go
 
-Structure Go services and libraries around explicit ownership, inward dependencies, thin runtime
-entrypoints, testable behavior, and Go-native tooling.
+Keep application meaning in business owners and external mechanics in concrete adapters. Use the
+smallest implementation that preserves those boundaries.
 
 ## Workflow
 
-1. Inspect `go.mod`, `go.work`, source and test layouts, generated boundaries, migrations,
-   entrypoints, repository commands, frameworks, tooling, and public APIs. Complete inspection when
-   repository type, established ownership, generated files, and verification commands are known.
-2. Read `references/code-principles.md` completely before planning or changing handwritten Go.
-   Before planning or editing handwritten production behavior, you must invoke `$outside-in-tdd`,
-   read its `SKILL.md` completely, and follow it as the controlling workflow. If it is unavailable,
-   stop and report the missing required skill; do not reproduce its workflow locally. Read
-   `references/testing-strategy.md` only for Go-specific owner suites, assertions, doubles, and
-   checks. When an owner test isolates an injected interface, also read
-   `references/gomock-unit-tests.md`.
-3. Give `$outside-in-tdd` the highest affected caller-visible owner and its narrow Go command. For a
-   multi-layer feature, map ownership from outside to inside as
-   `cmd/transport -> usecase/service -> repository/client -> deps`; for an explicitly layer-only
-   task, start at that requested layer. Treat a caller-visible domain operation backed by adapter
-   I/O as service-spanning even when an existing method only delegates.
-4. Read `references/project-structure.md` completely only when creating an application, classifying
-   an unstructured scaffold, or changing ownership. Then read only the active owner reference from
-   the router. Do not preload implementation references for lower layers merely because the final
-   feature will eventually use them.
-5. Follow the active owner through `$outside-in-tdd`. Finish its Go-specific suites with generated
-   gomock mocks before descending when dependencies are injected interfaces. Read the next owner or
-   cross-cutting reference only when a completed upper boundary demands that responsibility.
-6. Preserve coherent established conventions unless the user asks to standardize. For new or
-   unstructured applications, apply the normative responsibility map from `project-structure.md`.
-   Keep dependencies inward:
-   `transport/entrypoint -> usecase/service -> consumer-owned interfaces -> concrete adapters`.
-   Keep domain and business packages independent of frameworks, drivers, SDKs, and generated DTOs.
-   Complete implementation when direct owner suites and dependency checks prove those boundaries.
-7. Use `$devctl` for manifests and Devctl operations, `$devctl-openapi` for OpenAPI contracts, and
-   `$devctl-react-vite` for UI or generated-client work. Complete the task only after repository
-   commands, relevant generated/contract checks, and every changed owner suite pass.
+1. Inspect the requested behavior, callers, `go.mod`/`go.work`, current owners, generated paths,
+   migrations, entrypoints, repository commands, tooling, public APIs, and current changes. Finish
+   inspection when the affected owner, established boundaries, generated files, and verification
+   commands are known.
+2. For handwritten behavior, read and follow `$outside-in-tdd` as the controlling process. Give it
+   the highest affected caller-visible owner and a narrow Go test command. For a multi-layer feature,
+   progress `cmd/transport -> usecase/service -> repository/client -> deps`, completing each owner
+   before descending. If the required process skill is unavailable, stop and report it.
+3. Read only the references whose branch is active. Finish the current owner before loading a
+   lower-layer reference merely because the feature may eventually reach it.
+4. Preserve coherent existing boundaries and public APIs unless migration or standardization is
+   requested. Apply the ownership map normatively only to new or unstructured applications.
+5. Delegate manifests, sources, contract lint, scaffold, and generation to `$devctl`; OpenAPI
+   content to `$devctl-openapi`; and UI implementation to `$devctl-react-vite`. Return here for
+   handwritten Go placement, mapping, policy, and runtime work. Generated output remains owned by
+   its source contract and generator.
+6. Finish when every changed owner suite passes, applicable generation and contract drift checks
+   pass, imports still point inward, runtime resources have explicit cleanup, and unavailable checks
+   are reported separately.
 
-## Reference Router
+## Reference router
 
-Use this router just in time. Select the reference for the currently active owner, read it fully,
-complete that owner's behavior under `$outside-in-tdd`, and only then select a demanded lower or
-cross-cutting reference. Never treat the router as an upfront reading checklist.
+- Read [boundaries](references/boundaries.md) before changing domain, service, usecase, repository,
+  client, validation, transaction, error, or I/O ownership.
+- Read [delivery](references/delivery.md) before changing HTTP, gRPC, Kafka, authentication,
+  authorization, middleware, cache, idempotency, or protocol error behavior.
+- Read [runtime](references/runtime.md) before changing configuration, secrets, dependency wiring,
+  lifecycle, concurrency, logging, telemetry, health, or debug facilities.
+- Read [CLI](references/cli.md) before designing or changing command trees or executable leaves.
+- Read [stack and generation](references/stack-and-generation.md) before selecting `go-libs`
+  modules, changing Devctl-managed contracts, migrations, generators, or quality tooling.
+- Read [libraries](references/libraries.md) for reusable public packages, multiple Go modules,
+  caller-owned composition, or library lifecycle.
+- Read [packaging and monorepos](references/packaging-and-monorepos.md) for Docker, Compose, Helm,
+  Kubernetes, Go-plus-UI layout, build contexts, or deployment runtime scenarios.
 
-For `github.com/devctllabs/go-libs/*` dependencies, first inspect the version selected by the
-application's `go.mod` and `go.work`, then run `go doc -all <import-path>`. Package documentation
-owns library API semantics; this skill owns application placement and composition. When executable
-sample code is needed, also inspect that module's `example_test.go`, because the `go doc` CLI does
-not render Go examples.
+For a selected `github.com/devctllabs/go-libs/*` dependency, inspect the version in `go.mod` and
+`go.work`, run `go doc -all <import-path>`, and read its `example_test.go` when executable usage is
+needed. Library documentation owns API semantics; these references own application decisions.
 
-### Architecture layers
+## Ownership
 
-- Read `references/domain.md` for models, value objects, invariants, operation contracts, domain
-  errors, shared domain types, naming, and domain tests.
-- Read `references/service.md` for business operations, consumer-owned dependency interfaces,
-  `go-libs/txmanager` scope, service implementations, error propagation, and service tests.
-- Read `references/usecase.md` for optional multi-service flows, orchestration, retries,
-  compensations, flow contracts, and usecase tests.
-- Read `references/repository.md` for databases, caches, filesystems, object storage, storage
-  mapping, migrations, transaction-aware context use, error normalization, and repository tests.
-- Read `references/client.md` for outbound HTTP/gRPC/SDK/subprocess integrations, producers,
-  protocol mapping, timeouts, retries, error normalization, and client tests.
+These responsibilities do not require every package in every project.
 
-### Delivery and runtime
+| Owner | Application placement | Owns |
+| --- | --- | --- |
+| Domain | `internal/domain/<area>` | Vocabulary, values, pure invariants, operation data, error categories |
+| Service | `internal/service/<area>` | Business operations, policy, transitions, queries, adapter orchestration, transaction scope |
+| Usecase | `internal/usecase/<flow>` | A cohesive flow coordinating independent service capabilities |
+| Repository | `internal/repository/<area>` | DB/cache/files/object storage mechanics, layout, codecs, locking, atomic writes |
+| Client | `internal/client/<system>` | Outbound HTTP/gRPC/Git/SDK/subprocess/message protocols |
+| Transport | `internal/transport/<protocol>` | Inbound decoding, protocol validation/authentication, mapping, response/error encoding |
+| CLI | `cmd/<app>/internal` | Command input/output and execution of one application capability |
+| Composition | `internal/deps` | Config, concrete construction, resource ownership, runtime roots, cleanup |
 
-- Read `references/transport.md` for common inbound DTO, validation, mapping, error, registration,
-  middleware-boundary, and transport-test rules. Also read the selected protocol reference.
-- Read `references/transport-http.md` for HTTP handlers, routers, generated HTTP contracts,
-  Problem Details/status mapping, and HTTP tests.
-- Read `references/transport-grpc.md` for generated gRPC service aggregation, handlers,
-  interceptors, status/details mapping, registration, and gRPC tests.
-- Read `references/kafka-and-messaging.md` for Kafka consumers, producers, retry/DLQ policy,
-  idempotency keys, outbox decisions, compatibility, and messaging tests.
-- Read `references/cmd.md` for `urfave/cli`, root/group/leaf commands, help, `main`, `api`,
-  `consumer`, `cronjob`, command errors, and command tests.
-- Read `references/dependency-wiring.md` for `internal/deps`, `go-libs/di`, provider-file ownership,
-  grouped registrations, named dependencies, scenario roots, typed getters, and wiring smoke tests.
-- Read `references/configuration-and-secrets.md` for runtime configuration, precedence, generated
-  config, validation, typed config, secret redaction, and reload policy.
-- Read `references/lifecycle-and-concurrency.md` for context ownership, signals, timeouts,
-  `errgroup`, goroutines, cancellation, shutdown order, and lifecycle tests.
+**Policy follows meaning.** Rules that survive an HTTP, Git, SQL, or filesystem replacement belong
+in domain/service/usecase. Adapters execute those rules using backend mechanics. Services own query
+defaults, allowed selection, aggregation meaning, freshness, and business validation; adapters own
+protocol shape, storage integrity, containment, and race-safe enforcement.
 
-### Cross-cutting concerns
+**Orchestration follows the operation.** A service may coordinate several repositories and clients.
+Steps, retries, and compensation alone do not require a usecase. Add a usecase when one flow
+coordinates independently meaningful service capabilities; it consumes service contracts rather
+than repositories or clients.
 
-- Read `references/validation.md` for protocol, business, and persistence validation ownership and
-  validation error flow.
-- Read `references/cross-cutting-behavior.md` for middleware, service/usecase decorators, cache,
-  idempotency, helpers, and wrapper composition.
-- Read `references/auth-and-access-control.md` for authentication, authorization, actors,
-  principals, policy dependencies, tenant/resource scoping, and access tests.
-- Read `references/observability-and-health.md` for zap logging, metrics, tracing, health,
-  readiness/liveness, debug endpoints, pprof, and observability tests.
-- Read `references/io-boundaries-and-platform.md` for values versus capabilities, filesystem and
-  subprocess boundaries, external I/O, and `internal/platform` ownership.
+**A seam is a capability.** Put narrow behavioral interfaces in the calling package and domain data
+in domain packages. Name capabilities such as `LoadPackage`, `Checkout`, or `Publish`; keep raw OS,
+SQL, SDK, driver, and generated contracts inside concrete adapters. Keep configuration, paths,
+`context.Context`, data values, and pure helpers concrete.
 
-### Variants, contracts, and tooling
+**Dependencies point inward.** Domain imports no application layers. Business owners import no
+concrete adapters, delivery, DI, drivers, SDKs, or generated protocol DTOs. Transports consume
+business capabilities. Repository and client implementations do not import each other. Wiring may
+import concrete implementations to compose the graph.
 
-- Read `references/library-packages.md` for reusable public package APIs, dependency seams,
-  single-library repositories, multi-library monorepos, state, and library tests.
-- Read `references/go-generate.md` before adding or changing a `go:generate` directive, declaring
-  a generator tool dependency, or migrating an existing generator invocation.
-- Read `references/devctl-yaml-integration.md` when `devctl.yaml`, generators, sources,
-  components, contract inputs, generated output, or compatibility affect the work.
-- Read `references/gomock-unit-tests.md` for gomock/mockgen use, directives, mock packages,
-  package boundaries, and fake-to-gomock migrations.
-- Read `references/quality-tooling.md` for formatting, static analysis, module hygiene,
-  complexity, dependency checks, and quality adoption.
-- Read `references/deployment-and-packaging.md` for Docker, Compose, Helm, Kubernetes, deployment
-  configuration, secrets, probes, and rollout packaging.
-- Read `references/monorepo-and-ui.md` for Go plus UI layouts, module placement, API contracts,
-  generated clients, root tooling, and Docker build contexts.
+## Go contracts
 
-## Non-Negotiable Defaults
+- Keep commands, queries, results, views, filters, and stable error categories in
+  `domain/<area>`. Use named fixed-field types and maps only for genuinely dynamic keys.
+- Map transport DTOs, storage rows, SDK types, and generated messages at their adapter boundary.
+- Normalize adapter failures into caller-actionable domain categories while retaining causes and
+  preserving `errors.Is`/`errors.As`. Add useful call context with `%w`; expose only approved facts
+  at protocol boundaries and log each returned error once at its highest outcome boundary.
+- Constructors return exported concrete implementations with private fields. Required behavioral
+  dependencies are explicit constructor parameters; cohesive values use typed config; options are
+  for real optional overrides. Preserve established public APIs.
+- Name every handwritten interface input, including `ctx`. Document each interface method from its
+  method name, covering non-obvious guarantees, parameters, side effects, or stable errors.
+- Pass cancellation through blocking operations. Give each goroutine a lifetime and join owner.
 
-- For a multi-layer feature, complete the highest caller-visible owner with generated gomock mocks
-  for injected interfaces before implementing lower layers. Dependency direction is not
-  implementation order.
-- Route caller-visible domain operations through service/usecase before repository/client. Do not
-  satisfy a command or transport application capability directly with a concrete adapter.
-- Create only packages with current responsibilities; every present responsibility has one owner.
-- Put behavioral interfaces at the consumer side, except for the canonical shared
-  `github.com/devctllabs/go-libs/txmanager.Manager`/`Managers` contract. Keep data, configuration,
-  options, `context.Context`, path values, and pure helpers concrete.
-- Name every input parameter of every handwritten interface method, including `ctx`. Give every
-  interface method a doc comment beginning with its method name; describe semantically non-obvious
-  parameters by name. Do not hand-edit generated interfaces solely to satisfy this rule.
-- Use `github.com/stretchr/testify/require` for assertions in every new or changed test. Use
-  generated `go.uber.org/mock/gomock` mocks for every injected interface dependency in unit tests;
-  do not replace them with handwritten fakes, stubs, spies, or callback structs.
-- For new provider packages, return exported concrete implementations from constructors: `Service`,
-  backend/role-specific `...Repo`, and flow-specific `...Uc`. Keep their fields private and do not
-  replace them with provider-owned layer interfaces. Preserve established public APIs unless the
-  task explicitly changes them.
-- Keep fixed-field handwritten boundaries typed. Use maps only for genuinely dynamic key spaces.
-- Classify repository failures as a domain category plus retained raw cause; map only the domain
-  category and approved facts to protocol responses. Normalize other adapter failures at their
-  owning boundary. Preserve `errors.Is` and `errors.As`.
-- Put construction and lifecycle in `internal/deps`; keep `cmd` entrypoints thin. Give each present
-  dependency family one snake_case owner file and one private `provideX` entrypoint; let scenario
-  constructors invoke those groups explicitly and expose only eagerly resolved runtime roots.
-- Keep generated output behind the discovered generated boundary and never hand-edit it.
-- Keep tests beside behavior owners. One cross-layer test does not replace direct owner suites.
+## Go verification
+
+Use `testify/require` for new or changed assertions and generated `go.uber.org/mock/gomock` mocks
+when isolating injected interfaces. Keep mocks under the consumer's `mocks` package and change
+generator inputs rather than generated output. Test business decisions through capability mocks,
+adapter mechanics through real economical fixtures, and DI through a real graph.
+
+Use repository commands first. Otherwise format changed handwritten files, run `go vet ./...` and
+`go test ./...`, add focused race checks for concurrency changes, and run applicable module,
+contract, and generation drift checks. Existing tests count; passive types and absent layers do not
+need symmetry tests.
