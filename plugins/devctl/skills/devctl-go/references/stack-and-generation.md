@@ -18,8 +18,10 @@ copy a library API from this reference.
 | Metrics/tracing | `telemetry` | One owned runtime with explicit providers and cleanup |
 | Health/debug/build | `health*`, `debugserver`, `buildinfo` | Config-gated resources and private operational exposure |
 | PostgreSQL/SQLite | `postgresdb`/`sqlitedb`, `txmanager` | Endpoints in deps/adapters; atomic scope in business owner |
+| SQL builder | [`github.com/huandu/go-sqlbuilder`](https://github.com/huandu/go-sqlbuilder) | Repository-local builder types; parameterized values and an explicit database flavor |
+| Database migrations | `dbmigrate` | Explicit application command with embedded SQL; read [migrations](migrations.md) |
 | Filesystem | `filesystem` | Inspect first for new rooted adapters; keep its concrete API behind a semantic repository capability |
-| HTTP server | Echo, oapi-codegen, `go-libs/oapivalidator` | Strict generated edge plus handwritten library wiring and mapping |
+| HTTP server | Echo, oapi-codegen, `go-libs/oapivalidator` | Apply the [HTTP delivery boundary](delivery.md#http) |
 | HTTP authentication | `oapivalidatorjwt`, `oidcsession*` | Authentication at transport; authorization in business owner |
 | gRPC | `grpcserver`, `grpcclient`, `grpczap` | Generated boundaries and resources composed in deps |
 | Kafka | `kafka`, `kafkaproto`, `kafkazap` | Consumer in transport, producer in client, delivery policy explicit |
@@ -31,8 +33,9 @@ copy a library API from this reference.
 
 Use `$devctl` to inspect or change `devctl.yaml`, toolchain/tasks, components, sources, migration
 paths, runtime activation, and generator output paths. It owns CLI discovery, validation, resolved
-defaults, source synchronization, contract lint, scaffold, and generation. Use `$devctl-openapi`
-for OpenAPI content and the Devctl contract-naming references for gRPC/Kafka inputs.
+defaults, source synchronization, contract lint, scaffold, generation, and migration CLI operations.
+Use `$devctl-openapi` for OpenAPI content and the Devctl contract-naming references for gRPC/Kafka
+inputs.
 
 Run real generation through the discovered `devctl` CLI. Synchronize external sources before
 dependent lint or generation. Inspect generator configuration and resulting code rather than
@@ -42,20 +45,6 @@ Missing tools produce an explicit unrun check, never imitated generated output.
 
 Generated HTTP/gRPC/message/config packages are adapter inputs. The Go skill resumes ownership for
 handwritten mapping, service calls, runtime composition, and tests after generation.
-
-## Migrations
-
-Keep migrations with the selected database variant and use the repository's Devctl/mise tasks.
-Evolve schemas only through source-controlled, ordered migrations or the established schema tool;
-repository constructors and application startup do not mutate or apply schemas, and migration
-tooling stays out of runtime dependencies.
-
-When schema and repository behavior change together, update the migration, affected queries and
-mappers, and repository integration tests together. Verify that migrations apply cleanly to an
-empty database and, when compatibility matters, to a representative prior schema. Assert the
-intended tables, columns, indexes, and constraints; verify rollback only when the project supports
-it. For rolling deployments, plan compatible expand/migrate/contract steps and keep old and new code
-paths compatible for the required window. Generated migration directories remain generator-owned.
 
 ## Go generation
 
@@ -81,9 +70,9 @@ Plain substring checks alone do not establish valid Go.
 
 ## Quality gates
 
-Use repository commands and CI configuration first. For new projects without a convention, start
-with formatted changed handwritten files, `go vet ./...`, and `go test ./...`. Run focused race
-tests for concurrency changes and applicable module, contract, and generation checks.
+Select test and static-analysis commands using [Go verification](../SKILL.md#go-verification),
+preserving repository commands and CI configuration. Run focused race tests for concurrency
+changes and applicable module, contract, and generation checks.
 
 Use an established static-analysis command when present. Add `staticcheck` or a pinned aggregate
 linter only for an explicit standardization need and only when it owns a distinct failure class.

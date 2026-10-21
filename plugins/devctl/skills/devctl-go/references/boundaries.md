@@ -7,7 +7,7 @@ outbound systems. Add only owners that have a current responsibility.
 
 Keep domain packages independent of frameworks, drivers, SDKs, generated DTOs, environment access,
 and runtime construction. They own vocabulary, values, pure invariants, operation inputs/results,
-views, and stable error categories.
+and views.
 
 - Use `<Operation>Command` and `<Operation>Result` for writes, `<Operation>Query` and a result or
   `...View` for reads, `...Filter` for selection, and `...Params` for cohesive nested inputs.
@@ -15,9 +15,6 @@ views, and stable error categories.
   similarity of fields alone is insufficient.
 - Keep protocol and persistence tags on adapter-owned representations. Share domain types between
   application owners rather than copying parallel field sets.
-- Represent caller-actionable failures with stable categories discoverable through `errors.Is` or
-  `errors.As`. Typed errors may retain safe facts such as an identifier or attempted transition;
-  wrap the underlying category or cause.
 
 Validation follows ownership. Transport validates protocol shape and credentials; domain validates
 pure values and invariants; service/usecase validates business state and permissions; repositories
@@ -33,18 +30,21 @@ retry/compensation, query defaults, freshness, and adapter orchestration.
 Declare consumed capabilities in the service package and use domain types at those seams:
 
 ```go
+// Catalog resolves package sources into candidate revisions.
 type Catalog interface {
     // Lookup resolves source into a candidate revision.
     Lookup(ctx context.Context, source dompackage.Source) (dompackage.Candidate, error)
 }
 
+// Checkout materializes candidate revisions into local checkouts.
 type Checkout interface {
     // Materialize checks out the selected revision and returns its location.
     Materialize(ctx context.Context, candidate dompackage.Candidate) (dompackage.Location, error)
 }
 
+// Store publishes package records.
 type Store interface {
-    // Save publishes record, returning ErrConflict when its name already exists.
+    // Save publishes record, returning dompackage.ErrConflict when its name already exists.
     Save(ctx context.Context, record dompackage.Record) error
 }
 ```
@@ -116,7 +116,23 @@ One transaction covers only resources that actually participate. HTTP, Git, subp
 effects do not roll back with a database transaction. Use an outbox only when committing state
 without publishing the corresponding message would violate correctness.
 
-## Errors and tests
+## Error contracts
+
+Place caller-actionable application error definitions by their domain meaning, including errors
+produced by a service, repository, or client:
+
+- Area-specific sentinels, typed errors, and stable categories belong in
+  `internal/domain/<area>/errors.go`.
+- The same error concept used by multiple areas belongs in `internal/domain/common/errors.go`.
+  Introduce a shared `Error` or `Kind` only when callers need that abstraction.
+- Start with `errors.go` in the owning package. As it grows, split files by cohesive error concepts
+  within that package. Create a package for a distinct domain responsibility, rather than an error
+  count or file-size threshold.
+
+Use `errors.Is` for sentinel identity and `errors.As` for typed facts. Typed errors may retain safe
+facts such as an identifier or attempted transition and wrap the underlying category or cause.
+Keep backend-specific error definitions in concrete adapters and protocol error responses in
+delivery; those representations retain their own owners.
 
 Add operation context at each boundary with `%w`. Preserve cancellation and deadline categories.
 Protocol adapters map domain categories and approved facts; raw SQL, paths, credentials, broker
@@ -129,6 +145,8 @@ Retain both the caller-actionable category and raw cause so `errors.Is` and `err
 each; service/usecase code branches on domain or context categories, not retained adapter types.
 When normalizing cancellation or deadline failures, preserve both the matching domain category and
 the original context sentinel.
+
+## Owner tests
 
 Service/usecase tests prove decisions, ordering, transaction context propagation, retry, and
 compensation through generated capability mocks. Repository/client tests use the real economical

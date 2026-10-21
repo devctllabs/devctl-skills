@@ -1,7 +1,7 @@
 # Configuration, composition, and operations
 
-Runtime code translates validated configuration into an owned graph of concrete resources and
-typed scenario roots. Business packages receive capabilities and values; they do not resolve
+Composition resolves and validates configuration before acquiring resources for its owned graph
+and typed scenario roots. Business packages receive capabilities and values; they do not resolve
 dependencies, install process globals, or own process shutdown.
 
 ## Configuration and secrets
@@ -14,8 +14,10 @@ derived values, or validation that generated types do not express.
 Define source precedence once and preserve presence. Defaults are lowest priority, followed by the
 project's configured file/dotenv/environment sources and then explicitly supplied CLI overrides.
 An explicit `false`, zero, or empty string must survive; represent optional overrides with pointers
-or another presence-aware type. Required runtime validation happens after sources merge and before
-any dependent resource is resolved.
+or another presence-aware type. The deps scenario constructor owns source lookup, merging, and
+required runtime validation before resolving any dependent resource. Invalid resolved configuration
+may enter that constructor; it must fail before resource acquisition. Callers supply CLI overrides
+with presence intact rather than a configuration already merged with environment values.
 
 Pass cohesive constructor values in typed config. Keep secrets in dedicated fields and redact them
 from config dumps, logs, errors, traces, metrics, and protocol responses. Test precedence, explicit
@@ -50,6 +52,7 @@ failures use one rollback path with a fresh bounded cleanup context independent 
 cancellation, preserving both construction and cleanup errors with `errors.Join`.
 
 ```go
+// New constructs the order graph and releases partial resources if construction fails.
 func New(ctx context.Context) (_ *Container, err error) {
     c := &Container{di: di.New()}
     defer func() {
@@ -124,16 +127,30 @@ than mocks of official OpenTelemetry interfaces.
 
 ## Health and debug
 
-Liveness answers whether the process is responsive and should remain cheap and process-local.
-Readiness answers whether the instance can accept work and may include only dependencies whose
-failure prevents useful service. Telemetry exporter connectivity is operational state, not
-application readiness.
+Liveness answers whether the process is responsive and should remain cheap and process-local,
+without dependency checks. Readiness answers whether the instance can accept work; only
+dependencies whose failure prevents useful service should gate it. Telemetry exporter connectivity
+is operational state, not application readiness.
 
-Use the selected `go-libs/health*` modules for transport-neutral probes and protocol exposure.
+Use `go-libs/health` for transport-neutral probes: critical checks gate readiness and non-critical
+checks supply diagnostics. Expose probes through `healthserver` for HTTP or `healthgrpc` for the
+standard gRPC Health protocol. When health logging or metrics are needed, attach `healthzap` or
+`healthotel` as probe observers in composition, using the application's logger or meter provider.
+
+`healthserver` can mount probes on an existing HTTP server or own a standalone management listener.
+For a standalone listener, choose its address explicitly through configuration and limit network
+access to intended operational clients. For mounted routes, ensure middleware permits intended
+probe clients to reach them.
+
 Create optional management servers as config-gated resources, eagerly resolve them only when
 enabled, expose typed optional roots, and start them as lifecycle tasks. Startup probing may reuse
 the real liveness endpoint with deployment-level startup timing instead of inventing application
 startup state.
+
+Register `healthgrpc` on the application gRPC server and run its status publisher as a lifecycle
+task. Watched state starts as `NOT_SERVING`; `Watch` and `List` use published state, while `Check`
+evaluates probes afresh. Shut down the health service before stopping the application gRPC server
+so watchers can receive the terminal `NOT_SERVING` state.
 
 Use `debugserver` for a standalone profiling surface when required. Keep it disabled by default,
 bound to a private/loopback address unless the platform provides authenticated access, outside the
@@ -141,5 +158,6 @@ public application router, and absent from public Service/Ingress resources. Do 
 `http.DefaultServeMux`. The application explicitly owns any process-global mutex or block profiling
 rates and their runtime cost.
 
-Test probe aggregation and readiness transitions, config-gated management/debug roots, lifecycle
-task selection, and exporter/server cleanup.
+Test probe aggregation and readiness transitions, observer wiring, configured HTTP exposure,
+config-gated management/debug roots, gRPC status publication and shutdown order, lifecycle task
+selection, and exporter/server cleanup.

@@ -164,8 +164,8 @@ components:
 - S3 connections own endpoint, region, credential mode, and credential environment keys. Buckets
   reference an existing connection and may name the physical bucket; there is no bucket-prefix
   field.
-- Devctl may scaffold migration directories and project tasks, but it does not create SQL or apply
-  migrations.
+- Devctl scaffolds migration directories and project tasks. `migrate create` creates user-owned
+  SQL stubs; migration execution follows `references/migrations.md`.
 
 ## Other capabilities
 

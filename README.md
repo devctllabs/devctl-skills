@@ -75,13 +75,14 @@ The entrypoint for Devctl-managed Go projects, manifests, and explicit CLI workf
 - Interviewing for a new project's shape
 - Creating or updating `devctl.yaml`
 - Running Devctl initialization, synchronization, linting, or generation
+- Creating, inspecting, applying, or rolling back database migrations
 - Handing OpenAPI or handwritten Go work to its owning skill
 
 **Covers:**
 
 - Project and component discovery
 - Declarative manifests and environment configuration
-- Safe CLI workflows for `validate`, `inspect`, `sync`, `lint`, and `gen`
+- Safe CLI workflows for `validate`, `inspect`, `sync`, `lint`, `gen`, and `migrate`
 - Clear manifest, contract, generated, and handwritten ownership
 
 ### grill-with-product-docs

@@ -5,11 +5,12 @@ Use this reference when work crosses manifest, contract, generated, and handwrit
 ## Owners
 
 - `$devctl` owns `devctl.yaml`, CLI command discovery, effective defaults, scaffold, source sync,
-  contract lint, generation, and managed-output reporting.
+  contract lint, generation, migration CLI operations, and managed-output reporting.
 - `$devctl-openapi` owns OpenAPI paths, operations, schemas, errors, polymorphism, and file
   organization. It may account for project tooling but does not own Devctl wiring or generators.
 - `$devctl-go` owns handwritten Go packages, delivery adapters, dependency wiring, runtime,
-  configuration use, migrations, tests, and consumption of generated packages.
+  configuration use, migration SQL and schema compatibility, tests, and consumption of generated
+  packages.
 - `$devctl-react-vite` owns a separate React/Vite application and generated client integration.
 - `$devctl-obsidian-react` owns an Obsidian plugin runtime and its React surfaces.
 
@@ -28,6 +29,10 @@ For a Devctl Go service whose API changes:
 
 For an external client, establish its source and manifest target before sync, then lint and
 generate from the synchronized snapshot. Each operation remains explicit.
+
+For database schema changes, use `$devctl` for migration wiring and SQL-pair creation, `$devctl-go`
+for SQL content and affected implementation/tests, then `$devctl` for requested state inspection,
+application, or rollback under `references/migrations.md`.
 
 ## Boundaries
 
