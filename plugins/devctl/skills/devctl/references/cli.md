@@ -16,11 +16,12 @@ devctl <command> --help
 
 Inspect leaf help before using a subcommand or flag that is not already established in the repo.
 The v1 command families are `init`, `validate`, `inspect`, `enable`, `add`, `sync`,
-`lint`, and `gen`.
+`lint`, `gen`, and `migrate`.
 
 If Devctl is unavailable, direct manifest editing remains possible. Report that CLI validation,
-inspection, synchronization, lint, scaffold, or generation did not run. An existing project-owned
-task may replace generation only when its inputs, configuration, and managed output are explicit.
+inspection, synchronization, lint, scaffold, generation, or migration did not run. An existing
+project-owned task may replace generation only when its inputs, configuration, and managed output
+are explicit.
 
 ## Choose the operation
 
@@ -35,6 +36,8 @@ task may replace generation only when its inputs, configuration, and managed out
   contract inputs.
 - Use `sync` for external contract snapshots, `lint` for committed contract inputs, and `gen`
   for managed outputs.
+- Use `migrate` for SQL file creation, state inspection, application, and rollback; follow
+  `references/migrations.md` for target selection, authorization, and verification.
 
 Manifest mutations do not scaffold, synchronize, lint, generate, or install tools. `sync`,
 `lint`, and `gen` do not invoke one another.
@@ -51,7 +54,7 @@ Manifest mutations do not scaffold, synchronize, lint, generate, or install tool
 - Use project-owned tool versions and native configs. Inspect `go.mod`, `.mise.toml`, and
   project tasks; Devctl must not install tools implicitly.
 - Do not substitute handwritten output when a required generator is unavailable.
-- Devctl declares and scaffolds migration tasks but never applies migrations.
+- Scaffold and generation leave migration execution to explicit `migrate` operations.
 
 ## Contract and generation order
 
@@ -81,6 +84,7 @@ Report:
 - validation or inspection evidence;
 - sync, lint, scaffold, or generation skipped and why;
 - managed outputs changed;
+- migration target, operation, and observed state when applicable;
 - handwritten work remaining or routed to another skill.
 
 Never claim an unavailable or unexecuted command succeeded.

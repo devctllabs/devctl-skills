@@ -23,14 +23,44 @@ and middleware handoff without duplicating service policy.
 
 ## HTTP
 
-For contract-first HTTP, use `$devctl-openapi` for the canonical OpenAPI document and `$devctl` for
-the configured server/client generation. Inspect the generated framework and interfaces before
-writing handlers. Prefer strict generated bindings and an embedded or otherwise canonical runtime
-spec so routing, types, security requirements, and request validation cannot drift between files.
-The generator owns bindings, models, registration helpers, and an embedded spec only when configured.
-Use `github.com/devctllabs/go-libs/oapivalidator` for runtime OpenAPI validation; handwritten
-transport/deps code owns construction and wiring of that library, authentication adapters, other
-middleware, and mappings.
+New and changed application HTTP endpoints are contract-first, including in existing applications
+and requests that do not mention OpenAPI. Ready-made library handlers for health, metrics, pprof,
+and static serving may be wired directly. Application operations such as `/system/status` follow
+the application API rule.
+
+Use `$devctl-openapi` for the canonical OpenAPI document and `$devctl` for real strict server
+generation. Inspect the generated framework, interfaces, request/response types, and registration
+helpers before writing controllers. Complete the server boundary by:
+
+- Implementing the generated `StrictServerInterface` in handwritten controllers or their aggregate,
+  with generated request and response objects and domain mapping inside the transport. Add a
+  compile-time assertion such as `var _ api.StrictServerInterface = (*Server)(nil)`.
+- Passing that implementation through the generated strict adapter and into generated route
+  registration. For oapi-codegen this commonly means `NewStrictHandler` followed by
+  `RegisterHandlers` or its configured variant; use the actual generated signatures.
+
+The generator owns bindings, models, registration helpers, and an embedded spec when configured.
+If strict bindings are missing, update generator inputs and regenerate. Unavailable or incompatible
+tooling is a concrete blocker: report it and leave this step incomplete rather than substituting
+handwritten bindings, direct application-route registration, or an ordinary `ServerInterface`.
+
+In existing applications, migrate only new or changed operations while preserving their HTTP
+behavior. If a shared generated interface or registration boundary requires a wider migration,
+identify which otherwise untouched operations need controller, DTO mapping, or wiring changes and
+ask to expand scope. Preserving their HTTP behavior still makes those changes a wider migration.
+In a design response, mark that migration as awaiting agreement; in implementation, wait for
+agreement before making it.
+
+Express SSE and file responses through generated response interfaces too. Handwritten response
+visitors may implement those interfaces when needed for headers or streaming mechanics; preserve
+content types, status codes, cancellation, and flushing behavior.
+
+Use an embedded or otherwise canonical runtime spec with
+`github.com/devctllabs/go-libs/oapivalidator` for runtime OpenAPI validation. Handwritten transport/deps
+code owns construction and wiring of that library, authentication adapters, other middleware, and
+mappings. HTTP tests send requests through the assembled router, exercising the strict adapter and
+generated registration connected to the actual controller; interface conformance alone is not
+evidence of that wiring.
 
 Use the same configured base URL for validation and route registration. Compose one deliberate
 outer-to-inner pipeline: server telemetry, request correlation/access logging, recovery and body

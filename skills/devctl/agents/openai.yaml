@@ -1,4 +1,4 @@
 interface:
   display_name: "Devctl"
   short_description: "Manage Devctl Go manifests and workflows"
-  default_prompt: "Use $devctl to update this Go project's manifest and run the requested Devctl validation or generation workflow."
+  default_prompt: "Use $devctl to manage this Go project's manifest and run the requested validation, generation, or database migration workflow."

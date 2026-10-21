@@ -26,13 +26,13 @@ remain explicit gaps, never simulated passes.
 | [pragmatic-work](pragmatic-work/scenarios.md) | 1 | Complete, focused non-code work |
 | [simplify-code](simplify-code/scenarios.md) | 1 | Public characterization before private refactoring |
 | [outside-in-tdd](outside-in-tdd/scenarios.md) | 2 | Growing behavior versus migrating a public contract |
-| [devctl-go](devctl-go/scenarios.md) | 7 | Architecture scale plus runtime CLI/filesystem, HTTP auth/health, and Kafka delivery boundaries |
+| [devctl-go](devctl-go/scenarios.md) | 20 | New-application scaffold and target clarification, architecture scale, Go API documentation and named interface inputs, error ownership/growth and existing-contract preservation, SQL-builder selection/preservation, CLI configuration ownership, integration fixtures/conventions, strict HTTP wiring/migration scope, gRPC health/observers, and runtime filesystem, embedded migration, HTTP auth/health, and Kafka boundaries |
 | [devctl-python](devctl-python/scenarios.md) | 3 | Application operation, library scale, typed I/O migration |
 | [devctl-rust](devctl-rust/scenarios.md) | 2 | Reusable application core versus a plain library |
 | [devctl-openapi](devctl-openapi/scenarios.md) | 4 | Strict extensions, scale-adaptive topology, and consumer constraints |
 | [devctl-react-vite](devctl-react-vite/scenarios.md) | 2 | Visible async states versus generated API isolation |
 | [devctl-obsidian-react](devctl-obsidian-react/scenarios.md) | 2 | Resource teardown versus persisted-data migration |
-| [devctl](devctl/scenarios.md) | 4 | Surgical edits, real workflows, Go-only scope, and ClickHouse migrations |
+| [devctl](devctl/scenarios.md) | 7 | Surgical edits, real workflows, Go-only scope, migration execution, authorization, and target selection |
 | [devctl-code-review](devctl-code-review/scenarios.md) | 2 | Detect an introduced defect and avoid a false positive |
 | [conventional-commit](conventional-commit/scenarios.md) | 2 | Complete output versus narrow artifact selection |
 | [product-modeling](product-modeling/scenarios.md) | 2 | Decision qualification and deferred-answer lifecycle |

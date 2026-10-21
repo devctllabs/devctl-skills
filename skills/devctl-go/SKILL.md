@@ -14,19 +14,30 @@ smallest implementation that preserves those boundaries.
    migrations, entrypoints, repository commands, tooling, public APIs, and current changes. Finish
    inspection when the affected owner, established boundaries, generated files, and verification
    commands are known.
-2. For handwritten behavior, read and follow `$outside-in-tdd` as the controlling process. Give it
+2. Identify the target application and its existing skeleton. When the request leaves multiple
+   plausible application targets, or project status or scaffold applicability is uncertain,
+   explicitly ask the user before scaffolding or creating Go files. Before creating handwritten
+   Go files for a new application without a code skeleton, follow `$devctl` to prepare or reuse
+   `devctl.yaml` and successfully run `devctl init scaffold`. A `go.mod`, documentation, or manifest
+   alone is not a code skeleton. Existing application skeletons, reusable libraries, and
+   architecture-only work do not require this bootstrap. If scaffold is unavailable or fails,
+   report the result and ask how to proceed before writing handwritten Go code.
+   After successful scaffold, re-inspect the generated owners, entrypoints, managed paths,
+   tooling, and repository verification commands before starting handwritten work.
+3. For handwritten behavior, read and follow `$outside-in-tdd` as the controlling process. Give it
    the highest affected caller-visible owner and a narrow Go test command. For a multi-layer feature,
    progress `cmd/transport -> usecase/service -> repository/client -> deps`, completing each owner
    before descending. If the required process skill is unavailable, stop and report it.
-3. Read only the references whose branch is active. Finish the current owner before loading a
+4. Read only the references whose branch is active. Finish the current owner before loading a
    lower-layer reference merely because the feature may eventually reach it.
-4. Preserve coherent existing boundaries and public APIs unless migration or standardization is
-   requested. Apply the ownership map normatively only to new or unstructured applications.
-5. Delegate manifests, sources, contract lint, scaffold, and generation to `$devctl`; OpenAPI
+5. Preserve coherent existing boundaries and public APIs unless migration or standardization is
+   requested. Apply the ownership map normatively to new or unstructured applications; new
+   independent application error contracts follow domain ownership in existing applications too.
+6. Delegate manifests, sources, contract lint, scaffold, and generation to `$devctl`; OpenAPI
    content to `$devctl-openapi`; and UI implementation to `$devctl-react-vite`. Return here for
    handwritten Go placement, mapping, policy, and runtime work. Generated output remains owned by
    its source contract and generator.
-6. Finish when every changed owner suite passes, applicable generation and contract drift checks
+7. Finish when every changed owner suite passes, applicable generation and contract drift checks
    pass, imports still point inward, runtime resources have explicit cleanup, and unavailable checks
    are reported separately.
 
@@ -34,13 +45,17 @@ smallest implementation that preserves those boundaries.
 
 - Read [boundaries](references/boundaries.md) before changing domain, service, usecase, repository,
   client, validation, transaction, error, or I/O ownership.
-- Read [delivery](references/delivery.md) before changing HTTP, gRPC, Kafka, authentication,
-  authorization, middleware, cache, idempotency, or protocol error behavior.
+- Read [delivery](references/delivery.md) before adding or changing any HTTP endpoint, even when
+  the request does not mention OpenAPI, or changing gRPC, Kafka, authentication, authorization,
+  middleware, cache, idempotency, or protocol error behavior.
 - Read [runtime](references/runtime.md) before changing configuration, secrets, dependency wiring,
   lifecycle, concurrency, logging, telemetry, health, or debug facilities.
-- Read [CLI](references/cli.md) before designing or changing command trees or executable leaves.
+- Read [CLI](references/cli.md) before designing or changing command trees, executable leaves,
+  command dependency factories, or CLI tests.
+- Read [migrations](references/migrations.md) before adding SQL migrations or implementing an
+  application's migration command, embedded SQL selection, or schema compatibility changes.
 - Read [stack and generation](references/stack-and-generation.md) before selecting `go-libs`
-  modules, changing Devctl-managed contracts, migrations, generators, or quality tooling.
+  modules or SQL builders, or changing Devctl-managed contracts, generators, or quality tooling.
 - Read [libraries](references/libraries.md) for reusable public packages, multiple Go modules,
   caller-owned composition, or library lifecycle.
 - Read [packaging and monorepos](references/packaging-and-monorepos.md) for Docker, Compose, Helm,
@@ -87,8 +102,11 @@ import concrete implementations to compose the graph.
 
 ## Go contracts
 
-- Keep commands, queries, results, views, filters, and stable error categories in
-  `domain/<area>`. Use named fixed-field types and maps only for genuinely dynamic keys.
+- Keep commands, queries, results, views, and filters in `domain/<area>`. Use named fixed-field
+  types and maps only for genuinely dynamic keys.
+- Keep caller-actionable application error contracts (sentinels, typed errors, stable categories)
+  in domain packages; follow [error contracts](references/boundaries.md#error-contracts) for
+  placement and growth.
 - Map transport DTOs, storage rows, SDK types, and generated messages at their adapter boundary.
 - Normalize adapter failures into caller-actionable domain categories while retaining causes and
   preserving `errors.Is`/`errors.As`. Add useful call context with `%w`; expose only approved facts
@@ -96,8 +114,13 @@ import concrete implementations to compose the graph.
 - Constructors return exported concrete implementations with private fields. Required behavioral
   dependencies are explicit constructor parameters; cohesive values use typed config; options are
   for real optional overrides. Preserve established public APIs.
-- Name every handwritten interface input, including `ctx`. Document each interface method from its
-  method name, covering non-obvious guarantees, parameters, side effects, or stable errors.
+- Name every handwritten interface input, including `ctx`. Give each interface method its own
+  Go doc comment immediately above its declaration, starting with the method name and explaining
+  non-obvious guarantees, parameters, side effects, or stable errors.
+- In new or changed handwritten code, document exported types, functions, and concrete methods
+  with concise Go doc comments starting with the declared name and explaining their contract.
+  Document fields and unexported declarations when their semantics need explanation, such as
+  units, zero values, invariants, side effects, resource ownership, or concurrency guarantees.
 - Pass cancellation through blocking operations. Give each goroutine a lifetime and join owner.
 
 ## Go verification
@@ -107,7 +130,28 @@ when isolating injected interfaces. Keep mocks under the consumer's `mocks` pack
 generator inputs rather than generated output. Test business decisions through capability mocks,
 adapter mechanics through real economical fixtures, and DI through a real graph.
 
-Use repository commands first. Otherwise format changed handwritten files, run `go vet ./...` and
-`go test ./...`, add focused race checks for concurrency changes, and run applicable module,
-contract, and generation drift checks. Existing tests count; passive types and absent layers do not
-need symmetry tests.
+Run applicable repository format, lint, and test commands with project-owned tool versions before
+completion; available checks must pass. When no repository commands exist, format changed
+handwritten files and run `go test ./...`. Run standalone `go vet ./...` when configured static
+analysis does not already cover its checks. Add focused race checks for concurrency changes and
+run applicable module, contract, and generation drift checks. Existing tests count; passive types
+and absent layers do not need symmetry tests.
+
+### Integration tests
+
+- Preserve established tags, commands, and infrastructure. For a new container-backed suite, use
+  Testcontainers and `//go:build integration`. Take image versions and endpoints from project configuration.
+- Keep ordinary `go test ./...` independent of running external services. An explicit integration
+  run fails when a required service cannot be reached or provisioned.
+- Support external endpoints when the project needs them. An explicitly supplied endpoint selects
+  that service; connection failure ends setup rather than falling back to a container.
+- Isolate test-owned data using backend-appropriate schemas, databases, or collections. PostgreSQL
+  schemas leave advisory locks and notification channels database-wide: namespace keys/channels,
+  filter events by test identity, or use separate databases where needed.
+- Give fixtures explicit resource ownership and bounded cleanup independent of test/startup
+  cancellation, including partial setup. Surface cleanup failures as test failures.
+- Consolidate repeated setup in project-local helpers. Match shared fixtures to their required
+  lifetime, using `TestMain` for package resources and `t.Cleanup` for test resources.
+- Provide uncached integration-test and tagged-file static-analysis commands; connect them to
+  the project's task runner when present, including in test designs. Run the affected commands
+  when implementing.
