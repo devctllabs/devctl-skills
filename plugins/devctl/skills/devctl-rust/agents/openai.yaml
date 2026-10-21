@@ -1,4 +1,0 @@
-interface:
-  display_name: "Devctl Rust"
-  short_description: "Rust libraries, workspaces, runtime"
-  default_prompt: "Use $devctl-rust to preserve Rust conventions and boundaries, composing $outside-in-tdd for handwritten production behavior."

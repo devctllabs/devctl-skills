@@ -1,7 +1,0 @@
-interface:
-  display_name: "Product Modeling"
-  short_description: "Shape product truth, decisions, and documentation"
-  default_prompt: "Use $product-modeling to sharpen this product behavior, manage deferred decisions, and record qualifying PDRs."
-
-policy:
-  allow_implicit_invocation: true

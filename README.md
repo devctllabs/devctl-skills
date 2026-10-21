@@ -1,7 +1,6 @@
 # Devctl Skills
 
-A curated set of development skills for AI coding agents, distributed both as
-standalone skills and as an installable Codex plugin.
+A curated set of standalone development skills for AI coding agents.
 
 Each skill gives focused guidance, defaults, and reference material for a
 specific kind of engineering work.
@@ -273,24 +272,6 @@ Run `$setup-matt-pocock-skills` once before the first publishing workflow. See t
 [Product and System Documentation Workflow](docs/documentation-workflow.md) for the existing
 project on-ramp, standard prompts, optional paths, and feedback loops.
 
-## Install the Codex Plugin
-
-Add the GitHub repository as a marketplace, then install the plugin:
-
-```bash
-codex plugin marketplace add devctllabs/devctl-skills
-codex plugin add devctl@devctl
-```
-
-Start a new Codex session after installation so the bundled skills are loaded.
-
-For local development, add the repository checkout instead:
-
-```bash
-codex plugin marketplace add .
-codex plugin add devctl@devctl
-```
-
 ## Install Standalone Skills
 
 Copy one or more folders from `skills/` into a skills directory supported by
@@ -315,26 +296,6 @@ Use $devctl-code-review to review a staged diff, commit, branch, or pull request
 
 Skills use progressive disclosure: start with `SKILL.md`, then load only the
 references relevant to the task.
-
-## Plugin Maintenance
-
-The selected directories under root `skills/` are the source of truth. The installable bundle
-under `plugins/devctl/skills/` is generated and committed to the repository.
-
-Regenerate the bundle after changing a Devctl skill:
-
-```bash
-python3 scripts/sync_devctl_plugin.py
-```
-
-Check for drift without modifying files:
-
-```bash
-python3 scripts/sync_devctl_plugin.py --check
-```
-
-The synchronizer includes current and future directories named `devctl` or `devctl-*` plus the
-explicitly listed shared composition and documentation skills.
 
 ## Skill Structure
 
