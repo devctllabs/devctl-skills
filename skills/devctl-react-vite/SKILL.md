@@ -19,7 +19,7 @@ Use this skill to organize React + Vite + TypeScript apps around feature modules
 
 - Read `references/structure.md` for the overall folder layout, feature-module template, shadcn/ui and Tailwind placement, and `features/`, `shared/`, `core/`, `assets/`, colocated tests, and shared test infrastructure boundaries.
 - Read `references/routing-and-pages.md` for TanStack Router file-based route modules, hierarchical feature `pages/` route groups, route-facing page composition, desktop/mobile page view splits, page view state unions, route layout files, and page naming rules.
-- Read `references/generated-code.md` for generated code placement, OpenAPI codegen output, generated DTO usage, API adapters, and generated TanStack Query hooks.
+- Read `references/generated-code.md` for OpenAPI client generation, runtime contract validation, generated code placement, DTO usage, API adapters, or existing generated TanStack Query hooks.
 - Read `references/platform-services-and-di.md` for platform-dependent services, feature service contracts, `platform/services`, composite services, object-scoped backend routing, and DI wiring.
 - Read `references/error-handling.md` for `Result`, `DomainResult`, `DomainErrorType`, typed domain errors, API/Tauri error mapping, and React Query unwrapping.
 - Read `references/i18n.md` when adding or changing localization, typed translation resources, language selection, locale metadata, RTL handling, translated shared helpers, or Storybook i18n wiring.
@@ -57,6 +57,7 @@ Use this skill to organize React + Vite + TypeScript apps around feature modules
 - For each new or materially changed public, reusable, or visually risky UI component, create or update a colocated Storybook file with the same basename, such as `ProductCard.stories.tsx`. Cover primary UI states and layout-risk edge data; do not create stories for hooks, services, utilities, generated code, route modules, private helper subcomponents, or thin connected wrappers without independent visual states.
 - Use `src/test/` only for shared test setup, MSW, render helpers, fixtures, builders, and `src/test/storybook/` Storybook harnesses. Do not put normal product specs under `src/test/`.
 - Keep generated OpenAPI/API contract code in `src/shared/services/api/generated/<source-name>/`; never hand-edit generated files.
+- For a new OpenAPI client, use the Hey API Fetch/SDK/Zod recipe in `references/generated-code.md`; preserve an existing generator unless migration is requested.
 - Keep generated API code out of `features/*` by default. Platform service implementations or composite services may wrap generated functions for UI-specific behavior, mapping, query composition, or naming.
 - Keep route-facing components in feature-local `pages/` folders. Use nested `pages/[route-group]/` folders for related screens under the same URL context.
 - For TanStack Router, use file-based route modules under the configured routes directory, usually `src/routes`. Keep route modules thin, import feature pages through the feature public API, keep the generated route tree outside `src/routes`, and never hand-edit generated router files.

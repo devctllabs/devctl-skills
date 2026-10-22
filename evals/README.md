@@ -30,8 +30,8 @@ remain explicit gaps, never simulated passes.
 | [devctl-python](devctl-python/scenarios.md) | 3 | Application operation, library scale, typed I/O migration |
 | [devctl-rust](devctl-rust/scenarios.md) | 2 | Reusable application core versus a plain library |
 | [devctl-openapi](devctl-openapi/scenarios.md) | 4 | Strict extensions, scale-adaptive topology, and consumer constraints |
-| [devctl-react-vite](devctl-react-vite/scenarios.md) | 2 | Visible async states versus generated API isolation |
-| [devctl-obsidian-react](devctl-obsidian-react/scenarios.md) | 2 | Resource teardown versus persisted-data migration |
+| [devctl-react-vite](devctl-react-vite/scenarios.md) | 3 | Visible async states, generated API isolation, and validated Fetch client generation |
+| [devctl-obsidian-react](devctl-obsidian-react/scenarios.md) | 3 | Resource teardown, persisted-data migration, and generated mobile API transport |
 | [devctl](devctl/scenarios.md) | 7 | Surgical edits, real workflows, Go-only scope, migration execution, authorization, and target selection |
 | [devctl-code-review](devctl-code-review/scenarios.md) | 2 | Detect an introduced defect and avoid a false positive |
 | [conventional-commit](conventional-commit/scenarios.md) | 2 | Complete output versus narrow artifact selection |

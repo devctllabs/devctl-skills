@@ -1,0 +1,107 @@
+openapi: 3.1.0
+info:
+  title: Catalog fixture
+  version: 1.0.0
+servers:
+  - url: https://catalog.example.test
+paths:
+  /products/{id}:
+    get:
+      operationId: getProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: locale
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '204':
+          description: Deleted
+        default:
+          $ref: '#/components/responses/Problem'
+  /products:
+    post:
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProduct'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  schemas:
+    Product:
+      type: object
+      additionalProperties: false
+      required: [id, name, price]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+          minimum: 0
+    CreateProduct:
+      type: object
+      additionalProperties: false
+      required: [name, price]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        price:
+          type: number
+          minimum: 0
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+  responses:
+    Problem:
+      description: API failure
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
