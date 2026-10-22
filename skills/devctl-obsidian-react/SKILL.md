@@ -1,6 +1,6 @@
 ---
 name: devctl-obsidian-react
-description: Use for creating, changing, reviewing, testing, or releasing TypeScript Obsidian plugins with React, including host lifecycle, vault safety, mobile compatibility, UI isolation, and production tooling.
+description: Use for creating, changing, reviewing, testing, or releasing TypeScript Obsidian plugins with React, including host lifecycle, vault safety, mobile compatibility, OpenAPI clients, UI isolation, and production tooling.
 ---
 
 # Devctl Obsidian React
@@ -16,6 +16,7 @@ Treat the repository, installed `obsidian` types, current official Obsidian docu
 3. Select the smallest fitting structure from `references/project-structure.md`. Preserve coherent local conventions and migrate incrementally. Finish when dependency direction is explicit and no proposed layer lacks a current responsibility.
 4. Load only the references whose conditions match the task. Apply every applicable rule from each loaded reference:
    - Read `references/runtime-and-data-safety.md` for Obsidian lifecycle, registrations, commands, views, events, vault or file operations, network access, performance, security, mobile support, or advanced extension points.
+   - Read `references/api-clients.md` for OpenAPI client generation, API transport setup, runtime contract validation, or remote API service integration.
    - Read `references/react-ui-and-styling.md` for React mounting, component boundaries, host-native UI, accessibility, CSS, Tailwind, shadcn/ui, portals, or theming.
    - Read `references/state-settings-and-i18n.md` for subscriptions, shared state, settings persistence or migration, forms, validation, or localization.
    - Read `references/testing.md` when adding or changing behavior, tests, test doubles, real-Obsidian E2E, or CI test coverage.
@@ -32,6 +33,7 @@ Treat the repository, installed `obsidian` types, current official Obsidian docu
 - Target desktop and mobile by default. Isolate a required desktop capability behind an explicit platform adapter and set `isDesktopOnly` truthfully.
 - Use React for stateful or composed surfaces. Use native Obsidian APIs for simple settings, menus, notices, and modals.
 - Prefer local React state and narrow subscriptions. Add TanStack Query for remote or cache-shaped data and Zustand for genuinely shared client state.
+- For a new OpenAPI client, use the Hey API Fetch/SDK/Zod recipe in `references/api-clients.md`; preserve an existing generator unless migration is requested.
 - Style under a plugin-owned root with Obsidian CSS variables. Add Tailwind or shadcn/ui only with host-safe isolation.
 - Keep English as the source locale. Add `i18next` and `react-i18next` whenever the plugin supports more than one locale; omit an i18n runtime for English-only UI.
 - Apply the same lifecycle, data-safety, mobile, security, and performance standard to private and community plugins. Add publication artifacts only when distribution requires them.
