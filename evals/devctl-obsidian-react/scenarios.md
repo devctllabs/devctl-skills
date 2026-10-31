@@ -83,3 +83,77 @@ installed host types and a test double for its network boundary. Personal vaults
   services rather than generated runtime; retry and teardown owners are explicit.
 - No Node/Electron dependency is needed in the mobile transport. Local tests do not claim real
   desktop/mobile or unload/reload verification. No unnecessary UI, Storybook, or vault work appears.
+
+## Cached headless lifecycle gate
+
+### Request
+
+Create a minimal new Obsidian plugin with a command opening a native modal containing
+`Headless smoke ready`. Add its headless real-Obsidian E2E setup and PR gate. Keep this task
+focused on the plugin and its host-test tooling; React and Storybook are unnecessary for this
+native surface. Make repeated local and CI runs reuse unchanged dependencies. Prove that the
+gate passes for healthy behavior and detects a deliberate regression in the command's visible
+result. Keep the healthy source as the final state.
+
+### Setup
+
+Use an empty disposable workspace with Docker and Node/pnpm. Supply the current target
+SKILL.md and its resources. Permit dependency/image/Obsidian downloads. Start with new,
+empty dependency-image and host-download caches; existing base images may be reused. A
+caching-focused run may start from a minimal native plugin with working build and lifecycle
+spec/config, without Docker tooling, so application scaffolding does not obscure runner behavior. Keep raw
+process output and generated artifacts outside production skill files. If infrastructure is
+unavailable, retain the harness and report the failed prerequisite without claiming a host pass.
+
+### Success criteria
+
+- The three scripts distinguish native WDIO without rebuilding, production build plus the
+  same native suite, and headless execution. Cold image construction installs from the frozen
+  lockfile; runtime builds the plugin and runs real Obsidian under Xvfb without installing
+  dependencies. Host dependencies and stale bundles cannot supply the tested plugin.
+- Actual warm-build output shows the dependency-install layer reused; a source-only regression
+  also reuses it, while changing an install input invalidates it. Relevant manifests/configuration
+  precede source copies. Runtime mounts preserve the image's source and dependencies.
+- Disposable vault/application state, pinned image and PR host versions, project-scoped
+  caches, and retained failure diagnostics are wired coherently. The PR job uses official
+  Docker actions with GHA layer cache, loads a current-commit image without pushing it, invokes
+  the same headless entrypoint with `--prebuilt-image`, and uploads diagnostics on failure.
+- A real `--prebuilt-image` run skips image construction yet builds and tests the plugin.
+  A missing image fails. Normal local execution builds current inputs automatically.
+- Smoke asserts the visible command result before and after disable/enable, cleanup and
+  registration ownership, and uncaught plugin errors. Disable occurs with the modal still
+  open, so plugin teardown must close it before test teardown runs. Waits observe state
+  rather than sleeps.
+- Inspect actual healthy run output and a deliberately broken behavior run: healthy passes,
+  broken exits nonzero with an assertion about the behavior and diagnostics surviving container
+  removal. Check that the source ends healthy. Infrastructure failures are distinct from an
+  assertion failure and cannot satisfy either real-host result.
+
+## Preserve an existing host-test stack
+
+### Request
+
+Our plugin already has working native WDIO E2E. Improve its test documentation so new
+contributors can choose the right command and understand the boundary between browser tests
+and real Obsidian. Preserve existing runner, script names, package manager, and CI conventions;
+we are not asking for a tooling migration or a new container runner.
+
+### Setup
+
+Materialize a disposable existing-project fixture with `package.json` declaring npm and scripts
+`build:plugin: esbuild src/main.ts --bundle --platform=node --external:obsidian --outfile=main.js`,
+`spec:host: npm run build:plugin && wdio run wdio.conf.mjs`, and
+`spec:ui: vitest run --environment jsdom`. Include a minimal Obsidian plugin, synthetic
+`test/vault/Welcome.md`, a WDIO config using Mocha, one worker, `wdio-obsidian-service`,
+`plugins: ['.']`, and that vault, plus a command-result host spec. Add an existing CI job
+running `xvfb-run -a npm run spec:host` on Ubuntu. Provide the current target skill and
+resources. This is a documentation-only task; no installed toolchain is necessary.
+
+### Success criteria
+
+- Documentation names the existing commands accurately and distinguishes isolated UI tests
+  from host lifecycle evidence. It explains that the host command builds the plugin first.
+- Package manager, scripts, runner configuration, source, and CI stay unchanged; no Docker
+  harness or replacement commands are introduced merely to conform to new-project defaults.
+- The response distinguishes inspected configuration from actually executed checks and makes
+  no unsupported host-pass claim.
