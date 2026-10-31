@@ -43,6 +43,8 @@ Keep Vite configuration scoped to Vitest and Storybook. The plugin loads a file 
 
 Provide repository-consistent scripts for development watch, production build, typecheck, lint, unit tests, E2E, and an aggregate check. When the plugin has React UI, also provide Storybook development/build/test scripts. Make the production build run typecheck before packaging.
 
+For the headless E2E entrypoint, container build, artifact collection, and CI integration, read [headless-e2e.md](headless-e2e.md).
+
 Official baseline: [Obsidian sample plugin](https://github.com/obsidianmd/obsidian-sample-plugin).
 
 ## Local Development

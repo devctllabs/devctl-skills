@@ -7,7 +7,7 @@ Use the lowest layer that exercises the real contract:
 1. Unit-test pure parsing, migrations, reducers, path decisions, and domain behavior without Obsidian.
 2. Component-test React behavior with Vitest, jsdom, Testing Library, and `user-event` through visible roles and outcomes.
 3. Integration-test feature services and thin Obsidian adapters with narrow fakes for only the API members they consume.
-4. Run lifecycle and host contracts in a sandboxed Obsidian instance through `wdio-obsidian-service`.
+4. Run lifecycle and host contracts in a sandboxed real Obsidian instance, preserving a working host runner or using the new-project baseline in `headless-e2e.md`.
 
 Co-locate `*.test.ts[x]` with its source. Put shared render functions, builders, fake services, and environment setup under `src/test/`. Put cross-owner user flows under `test/integration/` only when no single source file naturally owns the scenario.
 
@@ -27,22 +27,8 @@ Read `storybook.md` for story placement, state coverage, host fixtures, interact
 
 ## Real-Obsidian E2E
 
-Use `wdio-obsidian-service` with a disposable vault and isolated application state. Build production artifacts before installation.
-
-Every plugin gets one smoke flow:
-
-1. install `main.js`, `manifest.json`, and optional `styles.css` into the sandbox vault;
-2. enable the plugin and assert that the plugin instance loads;
-3. exercise one registered command or primary surface;
-4. disable and re-enable the plugin;
-5. assert one active registration, no stale surface, and no uncaught plugin error.
-
-Add E2E scenarios for command availability, view restoration, settings persistence, vault mutation, editor behavior, network boundaries, pop-out windows, and mobile behavior according to risk. Test supported Obsidian versions when `minAppVersion` or compatibility logic changes.
+Read [headless-e2e.md](headless-e2e.md) for the real-host smoke contract, runner, scenario isolation, risk-based coverage, diagnostics, and compatibility checks. Keep host behavior in this layer rather than expanding test doubles to reproduce Obsidian.
 
 ## CI Gate
 
-On pull requests, run the complete gate required by `SKILL.md` and the Storybook checks defined in `storybook.md`. Run broader Obsidian-version and mobile matrices on release or a scheduled workflow according to feature risk.
-
-References:
-
-- [WDIO Obsidian Service](https://github.com/jesse-r-s-hines/wdio-obsidian-service)
+On pull requests, run the complete gate required by `SKILL.md`, the Storybook checks defined in `storybook.md`, and the host gate and compatibility policy in [headless-e2e.md](headless-e2e.md#ci-and-compatibility).
